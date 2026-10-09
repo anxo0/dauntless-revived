@@ -37,5 +37,13 @@ if(!`$db){throw 'No fresh database backup'}
     if ($LASTEXITCODE) { throw 'Transferred database integrity check failed' }
     Move-Item -LiteralPath $partial -Destination (Join-Path $dest $name)
     @{at=[DateTime]::UtcNow.ToString('o');file=$name;sha256=$info.hash;verified=$true} | ConvertTo-Json | Set-Content (Join-Path $dest 'last-success.json')
+    # Prune only old verified-copy filenames after the replacement passes both checks.
+    $base = [IO.Path]::GetFullPath($dest).TrimEnd('\') + '\'
+    foreach ($old in Get-ChildItem -LiteralPath $dest -File -Filter 'undaunted-*.db') {
+        if ($old.Name -eq $name) { continue }
+        $target = [IO.Path]::GetFullPath($old.FullName)
+        if (!$target.StartsWith($base, [StringComparison]::OrdinalIgnoreCase) -or ($old.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Unsafe backup retention path' }
+        Remove-Item -LiteralPath $target -Force
+    }
     Write-Output "Verified weekly database backup: $name"
 } finally { $lock.Dispose() }

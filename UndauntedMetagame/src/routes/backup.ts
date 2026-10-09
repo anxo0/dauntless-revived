@@ -39,7 +39,8 @@ export function CreateBackupRouter(options: Options) {
                 throw error;
             });
             if (exists) { res.sendStatus(409); return; }
-            const deadline = Date.now() + 60000;
+            // Multi-gigabyte production databases need more than a minute on VPS disks.
+            const deadline = Date.now() + 15 * 60 * 1000;
             // Use the writer's connection: external connections restart on each live save.
             await options.copy(destination, () => {
                 if (Date.now() >= deadline) throw new Error('Live backup deadline exceeded');

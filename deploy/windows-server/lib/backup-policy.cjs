@@ -2,7 +2,7 @@
 
 // External writes restart SQLite's incremental backup. Bound that work rather
 // than leaving an hourly backup reading the same pages for days.
-function backupProgress({timeoutMs = 60000, maxRestarts = 3, now = Date.now} = {}) {
+function backupProgress({timeoutMs = 900000, maxRestarts = 3, now = Date.now} = {}) {
     const deadline = now() + timeoutMs;
     let previous = Infinity, restarts = 0;
     return ({remainingPages}) => {

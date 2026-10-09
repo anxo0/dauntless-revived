@@ -66,7 +66,7 @@ async function main() {
                 try {
                     response = await fetch('http://127.0.0.1:61000/internal/backup', {
                         method: 'POST', headers: {'content-type': 'application/json', 'x-undaunted-gameserver-apikey': env.METAGAME_API_KEY},
-                        body: JSON.stringify({name: path.basename(path.dirname(dest))}), signal: AbortSignal.timeout(65000)
+                        body: JSON.stringify({name: path.basename(path.dirname(dest))}), signal: AbortSignal.timeout(905000)
                     });
                 } catch (error) {
                     // Only a refused connection proves the metagame is stopped. A timeout
