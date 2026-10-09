@@ -25,7 +25,7 @@ import { describeError, log, logToFile } from "./main/log";
 import { boundedString, externalTarget, isTrustedPageUrl, relayPortOverride, settingsPatch } from "./main/ipc-validate";
 import { INVITE_SCHEME, parseInvite } from "./shared/invite";
 import { IPC, type Snapshot, type TaskProgress } from "./shared/types";
-import { translate } from "./shared/i18n";
+import { systemLanguage, translate } from "./shared/i18n";
 import { APP_ID, SQUIRREL_NAME, UPDATE_FEED_URL } from "./main/constants";
 
 // Squirrel install / update / uninstall events: create or remove shortcuts, then quit.
@@ -356,7 +356,7 @@ function makePlatform(): Platform {
     hostPlatform: process.platform,
     appVersion: app.getVersion(),
     packaged: app.isPackaged,
-    defaultLanguage: app.getLocale().toLowerCase().startsWith("fi") ? "fi" : "en",
+    defaultLanguage: systemLanguage(app.getLocale()),
     relayPort,
     encryptor: {
       isAvailable: () => safeStorage.isEncryptionAvailable(),

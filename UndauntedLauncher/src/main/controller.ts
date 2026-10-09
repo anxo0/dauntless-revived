@@ -37,7 +37,7 @@ import type {
   Snapshot,
   TaskProgress,
 } from "../shared/types";
-import { EXPOSURE_MODES, GRAPHICS_PRESETS } from "../shared/types";
+import { EXPOSURE_MODES, GRAPHICS_PRESETS, LANGUAGES } from "../shared/types";
 import type { Endpoint } from "./http";
 import {
   fetchBrandingImage,
@@ -1233,7 +1233,7 @@ export class Controller {
         if (EXPOSURE_MODES.includes(p.exposure as ExposureMode)) s.exposure = p.exposure as ExposureMode;
         if (typeof p.windowed === "boolean") s.windowed = p.windowed;
         if (p.huntRegion === 'auto' || p.huntRegion === 'main' || p.huntRegion === 'aus' || p.huntRegion === 'ger') s.huntRegion = p.huntRegion;
-        if (p.language === "en" || p.language === "fi") s.language = p.language;
+        if (LANGUAGES.includes(p.language as Language)) s.language = p.language as Language;
       });
     }
     this.publish();

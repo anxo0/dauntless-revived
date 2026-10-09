@@ -4,7 +4,7 @@ import { promises as fsp, readFileSync } from "node:fs";
 import path from "node:path";
 import { isPrivateModeHost, isValidFingerprint, isValidHost, isValidInviteCode, isValidShareUrl, cleanServerName, type ServerMode } from "../shared/invite";
 import { isValidUsername } from "../shared/username";
-import { DEFAULT_GRAPHICS, EXPOSURE_MODES, GRAPHICS_PRESETS, type ExposureMode, type GraphicsPreset, type Language } from "../shared/types";
+import { DEFAULT_GRAPHICS, EXPOSURE_MODES, GRAPHICS_PRESETS, LANGUAGES, type ExposureMode, type GraphicsPreset, type Language } from "../shared/types";
 
 export interface StoredServer {
   mode: ServerMode;
@@ -86,7 +86,7 @@ export function sanitizeSettings(raw: unknown, language: Language, platform: Nod
   if (EXPOSURE_MODES.includes(raw.exposure as ExposureMode)) s.exposure = raw.exposure as ExposureMode;
   s.windowed = raw.windowed === true;
   if (raw.huntRegion === 'auto' || raw.huntRegion === 'main' || raw.huntRegion === 'aus' || raw.huntRegion === 'ger') s.huntRegion = raw.huntRegion;
-  if (raw.language === "en" || raw.language === "fi") s.language = raw.language;
+  if (LANGUAGES.includes(raw.language as Language)) s.language = raw.language as Language;
   if (isObject(raw.usernames)) {
     for (const [k, v] of Object.entries(raw.usernames)) if (/^[0-9a-f]{24}$/.test(k) && isValidUsername(v)) s.usernames[k] = v;
   }
