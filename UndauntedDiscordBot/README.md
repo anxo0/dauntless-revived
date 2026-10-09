@@ -28,12 +28,7 @@ the saved file, and copy the value after `Key:` into `/key link key:`. The bot a
 accepts a labelled backup or a key wrapped in Discord backticks. It never links an
 account by display name or by a shared/redeemed invite, and never replaces its key.
 
-Registration synchronizes `/key` globally (for DMs) and in the configured guild, or
-the bot's joined guilds when `DISCORD_GUILD_ID` is unset. Unchanged definitions are
-not rewritten; changed definitions preserve the existing command ID. Guild commands
-make updates available immediately. If Discord still shows **command is outdated**,
-close the command picker, reload Discord, and select Revived Warden's `/key link`
-again. This is a cached command-definition error, not an account-key rejection.
+Registration keeps one global `/key` command for servers and DMs and removes legacy guild copies. Existing global command IDs and unrelated commands are preserved. Reload Discord if an old duplicate remains cached.
 
 ## Windows supervision
 

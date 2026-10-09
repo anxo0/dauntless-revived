@@ -20,17 +20,23 @@ function shape(command, guild) {
 
 // Preserve command IDs and other commands. Avoid POST on every restart: clients cache versions.
 export async function syncKeyCommands(rest, applicationId, guildIds = []) {
-  const scopes = [{route:Routes.applicationCommands(applicationId), guild:false},
-    ...[...new Set(guildIds)].map(id=>({route:Routes.applicationGuildCommands(applicationId,id),guild:true}))];
+  const route = Routes.applicationCommands(applicationId);
+  const existing = (await rest.get(route)).find(command=>command.name==='key' && command.type===1);
   let changed = 0;
-  for (const {route,guild} of scopes) {
-    const body = {...keyCommand};
-    if (guild) delete body.contexts;
-    const existing = (await rest.get(route)).find(command=>command.name==='key' && command.type===1);
-    if (existing && JSON.stringify(shape(existing,guild))===JSON.stringify(shape(body,guild))) continue;
-    if (existing) await rest.patch(`${route}/${existing.id}`,{body});
-    else await rest.post(route,{body});
+  if (!existing || JSON.stringify(shape(existing,false))!==JSON.stringify(shape(keyCommand,false))) {
+    if (existing) await rest.patch(`${route}/${existing.id}`,{body:keyCommand});
+    else await rest.post(route,{body:keyCommand});
     changed++;
+  }
+  // One global command serves both guilds and DMs; remove only our old guild copies.
+  for (const id of new Set(guildIds)) {
+    const guildRoute=Routes.applicationGuildCommands(applicationId,id);
+    for (const command of await rest.get(guildRoute)) {
+      if (command.name==='key' && command.type===1) {
+        await rest.delete(`${guildRoute}/${command.id}`);
+        changed++;
+      }
+    }
   }
   return changed;
 }

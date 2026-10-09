@@ -45,7 +45,7 @@ if (!memberIntentEnabled) {
 
 client.once(Events.ClientReady, async () => {
   try {
-    const guilds = process.env.DISCORD_GUILD_ID ? [process.env.DISCORD_GUILD_ID] : [...client.guilds.cache.keys()];
+    const guilds = [...new Set([...client.guilds.cache.keys(), ...(process.env.DISCORD_GUILD_ID ? [process.env.DISCORD_GUILD_ID] : [])])];
     const changed = await syncKeyCommands(rest, client.application.id, guilds);
     await syncCounterCommand(rest,client.application.id);
     console.log(`Key command registration: ${changed} scopes updated`);
@@ -66,6 +66,7 @@ client.on(Events.InteractionCreate, async interaction => {
   }
   if (!interaction.isChatInputCommand() || interaction.commandName !== 'key') return;
   const id = interaction.user.id;
+  let stage='acknowledge';
   try {
     await interaction.deferReply({flags: MessageFlags.Ephemeral});
     if (process.env.DISCORD_GUILD_ID && interaction.guildId && interaction.guildId !== process.env.DISCORD_GUILD_ID) {
@@ -77,11 +78,14 @@ client.on(Events.InteractionCreate, async interaction => {
     active.add(id); cooldown.set(id, Date.now() + 10000);
     try {
       const subcommand = interaction.options.getSubcommand();
+      stage=subcommand;
       const claim = subcommand === 'claim';
       const result = subcommand === 'link'
         ? await keys.link(id, interaction.options.getString('key', true).trim())
         : claim ? await keys.deliver(id, code => interaction.user.send({content: inviteMessage(inviteConfig, code), allowedMentions: {parse: []}}), code => findInviteMessage(interaction.user, code))
         : await keys.run(id, false);
+      stage='reply';
+      console.log(JSON.stringify({event:'key_result',status:result.status,at:new Date().toISOString()}));
       if (result.status === 'sent') console.log(JSON.stringify({event:'key_dm_sent',at:new Date().toISOString()}));
       {
         const messages = {
@@ -106,7 +110,7 @@ client.on(Events.InteractionCreate, async interaction => {
       }
     } finally { active.delete(id); }
   } catch (error) {
-    console.error(JSON.stringify({event:'key_interaction_failed',at:new Date().toISOString(),discordId:id,code:Number.isInteger(error.code)?error.code:undefined,status:Number.isInteger(error.status)?error.status:undefined,kind:['AbortError','TimeoutError','TypeError','SyntaxError'].includes(error.name)?error.name:'Error'})); // No tokens/codes/payloads.
+    console.error(JSON.stringify({event:'key_interaction_failed',at:new Date().toISOString(),discordId:id,stage,frames:error.stack?.split('\n').slice(1,4),code:Number.isInteger(error.code)?error.code:undefined,status:Number.isInteger(error.status)?error.status:undefined,kind:['AbortError','TimeoutError','TypeError','SyntaxError'].includes(error.name)?error.name:'Error'})); // No tokens/codes/payloads.
     if (interaction.deferred) await interaction.editReply('The key service is unavailable. Please try again shortly.').catch(() => {});
   }
 });
