@@ -108,19 +108,22 @@ export class Keys {
       const result = await this.handle(user, true);
       if (result.status !== 'ready') return result;
       const entry = this.state.users[user];
+      // Previous private replies were dismissible; deliver that same invite once by DM.
+      if (entry.deliveryChannel === 'ephemeral') entry.delivery = 'unsent';
       if (entry.delivery === 'sent') return {status: 'already_sent'};
       if (entry.delivery !== 'unsent') {
         if (!reconcile) return {status: entry.delivery === 'reserved' ? 'delivery_uncertain' : 'already_sent'};
         const previous = await reconcile(result.code);
         if (previous === undefined) return {status: 'delivery_uncertain'};
         if (previous) {
-          entry.delivery = 'sent'; entry.messageId = previous.id; entry.sentAt = previous.createdAt;
+          entry.delivery = 'sent'; entry.deliveryChannel = 'dm'; entry.messageId = previous.id; entry.sentAt = previous.createdAt;
           await this.save(this.state);
           return {status: 'already_sent'};
         }
       }
       // Reserve durably before Discord: an ambiguous timeout must never send twice.
       entry.delivery = 'reserved';
+      entry.deliveryChannel = 'dm';
       entry.attemptedAt = new Date().toISOString();
       try { await this.save(this.state); }
       catch (error) { entry.delivery = 'unsent'; throw error; }

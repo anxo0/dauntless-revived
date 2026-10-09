@@ -158,3 +158,17 @@ test('identity verification sends the supplied key only to loopback and rejects 
   assert.equal(sent.redirect,'error');
   status=401; assert.equal(await api.identity('bad-key'),null);
 });
+
+test('ephemeral recipients receive the same invite once by DM, without minting another',async()=>{
+ const f=setup();await f.service.deliverPrivate(user,async()=>{});let sent=0;
+ assert.equal((await f.service.deliver(user,async code=>{assert.equal(code,'DR-test');sent++;return {id:'message'};})).status,'sent');
+ assert.equal((await f.service.deliver(user,async()=>{sent++;})).status,'already_sent');
+ assert.equal(sent,1);assert.equal(f.count(),1);assert.equal(f.state.users[user].deliveryChannel,'dm');
+});
+test('ambiguous DM after ephemeral migration stays reserved and is reconciled',async()=>{
+ const f=setup();await f.service.deliverPrivate(user,async()=>{});
+ assert.equal((await f.service.deliver(user,async()=>{throw Error('network timeout');})).status,'delivery_uncertain');
+ assert.equal(f.state.users[user].deliveryChannel,'dm');
+ assert.equal((await f.service.deliver(user,async()=>{throw Error('must not send again');},async()=>({id:'existing',createdAt:'now'}))).status,'already_sent');
+ assert.equal(f.count(),1);
+});

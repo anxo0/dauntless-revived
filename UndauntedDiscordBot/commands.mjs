@@ -2,7 +2,7 @@ import { Routes, SlashCommandBuilder } from 'discord.js';
 
 export const keyCommand = new SlashCommandBuilder().setName('key').setDescription('Your Dauntless Revived access code')
   .setContexts(0, 1)
-  .addSubcommand(option => option.setName('claim').setDescription('View your launcher invite in a message only you can see'))
+  .addSubcommand(option => option.setName('claim').setDescription('Receive your launcher invite by direct message'))
   .addSubcommand(option => option.setName('status').setDescription('Check your account link or code redemption'))
   .addSubcommand(option => option.setName('link').setDescription('Link your existing account using its saved account key, not a Join invite')
     .addStringOption(value => value.setName('key').setDescription('Settings > Save a backup of your key > copy the Key: value (not your Join invite)').setRequired(true).setMinLength(8).setMaxLength(2048)))

@@ -1,3 +1,4 @@
+import {findInviteMessage} from './dm-history.mjs';
 import { Client, Events, GatewayIntentBits, MessageFlags, REST } from 'discord.js';
 import { resolve, dirname, join } from 'node:path';
 import {createCounters, syncCounterCommand} from './counter.mjs';
@@ -79,12 +80,9 @@ client.on(Events.InteractionCreate, async interaction => {
       const claim = subcommand === 'claim';
       const result = subcommand === 'link'
         ? await keys.link(id, interaction.options.getString('key', true).trim())
-        : claim ? await keys.deliverPrivate(id, code => interaction.editReply({content: inviteMessage(inviteConfig, code), allowedMentions: {parse: []}}))
+        : claim ? await keys.deliver(id, code => interaction.user.send({content: inviteMessage(inviteConfig, code), allowedMentions: {parse: []}}), code => findInviteMessage(interaction.user, code))
         : await keys.run(id, false);
-      if (result.status === 'private_sent') {
-        console.log(JSON.stringify({event:'key_private_reply_sent',at:new Date().toISOString()}));
-        return;
-      }
+      if (result.status === 'sent') console.log(JSON.stringify({event:'key_dm_sent',at:new Date().toISOString()}));
       {
         const messages = {
           sent: '🔑 **Invite Sent**\nCheck your DMs. Paste the complete invite into the launcher’s Join box.\n**Clear skies, Slayer.**',
@@ -98,9 +96,9 @@ client.on(Events.InteractionCreate, async interaction => {
           invalid_key: `🔑 **Account Key Not Recognized**\nThis server did not recognize that account key.\n\n${keyInstructions}\n\nIf the saved key still fails, contact the server team with your launcher username and this message, not your key.`,
           discord_already_linked: 'Your Discord is already linked to another account. Contact the server team to change it.',
           account_already_linked: 'This account is already linked to another Discord. Contact the server team to change it.',
-          ready: '🔑 **Key Ready**\nYour code has not been redeemed. Run `/key claim` to view your existing invite privately.',
+          ready: '🔑 **Key Ready**\nYour code has not been redeemed. Run `/key claim` to receive your existing invite by DM.',
           redeemed: '🔑 **Key Accepted**\nYour Revived code has been redeemed successfully.\n**Clear skies, Slayer.**',
-          none: '🔑 **No Key Yet**\nRun `/key claim` to receive an invite in a message only you can see.',
+          none: '🔑 **No Key Yet**\nRun `/key claim` to receive a saved copy of your invite by DM.',
           pending: 'Your code is being prepared. Try `/key claim` again shortly.',
           revoked: 'Your code is unavailable. Contact the server team.',
         };
