@@ -25,6 +25,7 @@ import type {
   ErrorCode,
   ExposureMode,
   ExternalTarget,
+  GameLanguage,
   GraphicsPreset,
   InviteCheck,
   Language,
@@ -37,7 +38,7 @@ import type {
   Snapshot,
   TaskProgress,
 } from "../shared/types";
-import { EXPOSURE_MODES, GRAPHICS_PRESETS } from "../shared/types";
+import { EXPOSURE_MODES, GAME_LANGUAGES, GRAPHICS_PRESETS, LANGUAGES } from "../shared/types";
 import type { Endpoint } from "./http";
 import {
   fetchBrandingImage,
@@ -57,7 +58,7 @@ import { dllStatus, installPinnedDlls, DllError, win64Dir } from "./dlls";
 import { installClientMods } from "./client-mods";
 import { applyGameConfig } from "./engineini";
 import { locateExistingGame } from "./game-folder";
-import { buildLaunchArgs, describeLaunch, GameProcess, type LaunchRuntime, type SpawnFn } from "./launch";
+import { buildLaunchArgs, describeLaunch, GameProcess, gameLocale, type LaunchRuntime, type SpawnFn } from "./launch";
 import { backupFileText, KeyStore, KeyStoreError, serverId, type Encryptor, type KeySlot } from "./keystore";
 import { SettingsStore, type StoredServer, type StoredSettings } from "./settings";
 import { freeBytes, missingVcRuntime } from "./system";
@@ -84,6 +85,8 @@ export interface Platform {
   appVersion: string;
   packaged: boolean;
   defaultLanguage: Language;
+  // The operating system's locale ("es-ES"), for the game language "auto".
+  systemLocale?: string;
   encryptor: Encryptor;
   manifest: GameManifest | null;
   gameConfigDir?: string;
@@ -290,7 +293,7 @@ export class Controller {
       },
       task: this.task,
       game: { running: this.game.running, relayPort: this.relay?.port ?? null },
-      settings: { graphics: this.s.graphics, exposure: this.s.exposure, windowed: this.s.windowed, language: this.s.language, ...(this.s.huntRegion ? {huntRegion:this.s.huntRegion} : {}) },
+      settings: { graphics: this.s.graphics, exposure: this.s.exposure, windowed: this.s.windowed, language: this.s.language, gameLanguage: this.s.gameLanguage, ...(this.s.huntRegion ? {huntRegion:this.s.huntRegion} : {}) },
       app: { version: this.p.appVersion, packaged: this.p.packaged, updateReady: this.updateReady },
       status: this.status,
       statusUnsupported: this.statusUnsupported,
@@ -1172,7 +1175,7 @@ export class Controller {
           log.error(`could not write the game config: ${describeError(e)}`);
           return this.fail("config_failed");
         }
-        const args = buildLaunchArgs({ host: gameHost, port: gamePort, key, windowed: this.s.windowed || displayRepaired });
+        const args = buildLaunchArgs({ host: gameHost, port: gamePort, key, windowed: this.s.windowed || displayRepaired, gameLocale: gameLocale(this.s.gameLanguage, this.p.systemLocale ?? "en-US") });
         const via = prepared ? ` via ${prepared.runtimeName}` : "";
         log.info(`starting ${describeLaunch(EXE_NAME, args)}${via}${sv.mode === "public" ? ` (relay to ${sv.host}:${sv.port})` : ""}`);
         try {
@@ -1233,11 +1236,12 @@ export class Controller {
         if (EXPOSURE_MODES.includes(p.exposure as ExposureMode)) s.exposure = p.exposure as ExposureMode;
         if (typeof p.windowed === "boolean") s.windowed = p.windowed;
         if (p.huntRegion === 'auto' || p.huntRegion === 'main' || p.huntRegion === 'aus' || p.huntRegion === 'ger') s.huntRegion = p.huntRegion;
-        if (p.language === "en" || p.language === "fi") s.language = p.language;
+        if (LANGUAGES.includes(p.language as Language)) s.language = p.language as Language;
+        if (GAME_LANGUAGES.includes(p.gameLanguage as GameLanguage)) s.gameLanguage = p.gameLanguage as GameLanguage;
       });
     }
     this.publish();
-    return { graphics: this.s.graphics, exposure: this.s.exposure, windowed: this.s.windowed, language: this.s.language, ...(this.s.huntRegion ? {huntRegion:this.s.huntRegion} : {}) };
+    return { graphics: this.s.graphics, exposure: this.s.exposure, windowed: this.s.windowed, language: this.s.language, gameLanguage: this.s.gameLanguage, ...(this.s.huntRegion ? {huntRegion:this.s.huntRegion} : {}) };
   }
 
   async openExternal(target: ExternalTarget): Promise<ActionResult> {

@@ -45,6 +45,7 @@ const api = {
       ...(patch.windowed !== undefined ? { windowed: patch.windowed } : {}),
       ...(patch.huntRegion !== undefined ? { huntRegion: patch.huntRegion } : {}),
       ...(patch.language !== undefined ? { language: patch.language } : {}),
+      ...(patch.gameLanguage !== undefined ? { gameLanguage: patch.gameLanguage } : {}),
     }),
   setStatusPolling: (on: boolean): Promise<void> => ipcRenderer.invoke(IPC.setStatusPolling, on === true),
   refreshStatus: (): Promise<void> => ipcRenderer.invoke(IPC.refreshStatus),

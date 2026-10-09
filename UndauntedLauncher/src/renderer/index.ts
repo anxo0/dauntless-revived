@@ -12,7 +12,7 @@ import { checkUsername, extractAccountKey } from "../shared/username";
 import { exposureKey, graphicsKey, primaryButton, shortFile, stepIndex, taskView, updateReason, whereKey } from "../shared/ui-model";
 import { formatBytes, formatDate, formatDuration, formatRunningTime } from "../shared/format";
 import { sortInstances, type InstanceKind, type ServerStatus, type StatusInstance } from "../shared/status";
-import { EXPOSURE_MODES, GRAPHICS_PRESETS, type Branding, type ExposureMode, type ExternalTarget, type GraphicsPreset, type LauncherError, type NewsItem, type Snapshot, type TaskProgress } from "../shared/types";
+import { EXPOSURE_MODES, GAME_LANGUAGES, GRAPHICS_PRESETS, LANGUAGES, type Branding, type ExposureMode, type ExternalTarget, type GameLanguage, type GraphicsPreset, type Language, type LauncherError, type NewsItem, type Snapshot, type TaskProgress } from "../shared/types";
 
 type View = "play" | "news" | "server" | "settings" | "partners" | "mods" | "credits";
 const VIEWS: readonly View[] = ["play", "news", "server", "settings", "partners", "mods", "credits"];
@@ -25,11 +25,13 @@ type Modal =
 
 const api = window.launcher;
 const ART_URL = /^dr-art:\/\/bg\/[0-9a-f]{64}$/;
+const TIME_LOCALES: Record<Language, string> = { en: "en-GB", fi: "fi-FI", es: "es-ES" };
+const GAME_LANGUAGE_NAMES: Record<Exclude<GameLanguage, "auto">, string> = { "en-US": "English", "de-DE": "Deutsch", "es-ES": "Español", "fr-FR": "Français", "it-IT": "Italiano", "ja-JP": "日本語", "pt-BR": "Português (Brasil)", "ru-RU": "Русский" };
 
 const state = {
   snap: null as Snapshot | null,
   task: null as TaskProgress | null,
-  lang: "en" as "en" | "fi",
+  lang: "en" as Language,
   view: "play" as View,
   inviteText: "",
   username: "",
@@ -316,7 +318,7 @@ function playConnect(snap: Snapshot): HTMLElement[] {
   const sv = snap.server!;
   const name = serverName();
   const pub = sv.mode === "public";
-  const lastChecked = snap.connect.lastCheckedAt ? t("connect_last_checked", { time: new Date(snap.connect.lastCheckedAt).toLocaleTimeString(state.lang === "fi" ? "fi-FI" : "en-GB") }) : null;
+  const lastChecked = snap.connect.lastCheckedAt ? t("connect_last_checked", { time: new Date(snap.connect.lastCheckedAt).toLocaleTimeString(TIME_LOCALES[state.lang]) }) : null;
   const foot = h("div", { class: "card-row" }, lastChecked ? h("span", { class: "hint" }, lastChecked) : null, leaveLink(snap));
   if (snap.connect.checking || (snap.connect.problem === null && snap.connect.lastCheckedAt === null)) {
     return [eyebrow(snap), ...heading(t("connect_checking_title", { name }), t(pub ? "connect_checking_text_public" : "connect_checking_text")), card("", h("div", { class: "card-row" }, h("div", { class: "spinner", role: "presentation" }), t("connect_checking_wait")))];
@@ -673,7 +675,7 @@ function renderProgress(task: TaskProgress): void {
   const v = taskView(task, state.lang);
   const p = progressEls;
   p.title.textContent = t(v.titleKey);
-  p.percent.textContent = v.indeterminate ? "" : `${v.percent.toFixed(v.percent < 10 ? 1 : 0).replace(".", state.lang === "fi" ? "," : ".")} %`;
+  p.percent.textContent = v.indeterminate ? "" : `${v.percent.toFixed(v.percent < 10 ? 1 : 0).replace(".", state.lang === "en" ? "." : ",")} %`;
   p.fill.style.width = `${v.indeterminate ? 35 : v.percent}%`;
   p.bar.classList.toggle("paused", task.paused);
   p.bar.classList.toggle("indeterminate", v.indeterminate);
@@ -1235,12 +1237,27 @@ function renderSettings(): void {
     );
 
     const langRow = h("div", { class: "lang-switch", role: "group", "aria-label": t("set_language"), style: undefined });
-    for (const l of ["en", "fi"] as const) {
-      const b = h("button", { type: "button", class: "lang-btn", lang: l, "aria-pressed": snap.settings.language === l ? "true" : "false", "data-fk": `set-lang-${l}` }, t(l === "en" ? "lang_en" : "lang_fi"));
+    for (const l of LANGUAGES) {
+      const b = h("button", { type: "button", class: "lang-btn", lang: l, "aria-pressed": snap.settings.language === l ? "true" : "false", "data-fk": `set-lang-${l}` }, t(`lang_${l}`));
       b.addEventListener("click", () => void api.setSettings({ language: l }));
       langRow.appendChild(b);
     }
-    const language = card("settings-section", h("h2", { class: "card-title" }, t("set_language")), langRow);
+    // The game's own text language: every language the 1.4.4 client has text for, by its own name.
+    const gameLanguage = h("select", { class: "select", id: "game-language-select", "data-fk": "game-language" });
+    for (const g of GAME_LANGUAGES) {
+      const o = h("option", { value: g }, g === "auto" ? t("game_lang_auto") : GAME_LANGUAGE_NAMES[g]);
+      if (g !== "auto") o.setAttribute("lang", g);
+      if (g === snap.settings.gameLanguage) o.selected = true;
+      gameLanguage.appendChild(o);
+    }
+    gameLanguage.addEventListener("change", () => void api.setSettings({ gameLanguage: gameLanguage.value as GameLanguage }));
+
+    const language = card(
+      "settings-section",
+      h("h2", { class: "card-title" }, t("set_language")),
+      langRow,
+      h("div", { class: "settings-row" }, h("div", { class: "settings-row-text" }, h("label", { class: "settings-row-title", for: "game-language-select" }, t("set_game_language")), h("span", { class: "settings-row-sub" }, t("set_game_language_text"))), gameLanguage),
+    );
 
     const account = card(
       "settings-section",
@@ -1856,7 +1873,7 @@ function initChrome(): void {
     max.setAttribute("aria-label", t(maximized ? "window_restore" : "window_maximize"));
   });
   for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>("#lang-switch .lang-btn"))) {
-    b.addEventListener("click", () => void api.setSettings({ language: b.dataset.lang === "fi" ? "fi" : "en" }));
+    b.addEventListener("click", () => void api.setSettings({ language: LANGUAGES.find((l) => l === b.dataset.lang) ?? "en" }));
   }
   // Credits, Discord and GitHub live in the rail, so they are available on every page, invite or not.
   const credits = $("#credits-btn");

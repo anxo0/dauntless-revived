@@ -13,7 +13,7 @@ export function formatBytes(bytes: number, lang: Language = "en"): string {
   }
   const digits = unit === 0 ? 0 : value >= 100 ? 0 : value >= 10 ? 1 : 2;
   const text = value.toFixed(digits);
-  return `${lang === "fi" ? text.replace(".", ",") : text} ${UNITS[unit]}`;
+  return `${lang === "en" ? text : text.replace(".", ",")} ${UNITS[unit]}`;
 }
 
 export function formatSpeed(bytesPerSecond: number, lang: Language = "en"): string {
@@ -45,7 +45,7 @@ export function formatRunningTime(startedAt: string | null, now: number, lang: L
   const t = Date.parse(startedAt);
   if (!Number.isFinite(t)) return "–";
   const minutes = Math.max(0, Math.floor((now - t) / 60000));
-  if (minutes < 1) return lang === "fi" ? "juuri alkanut" : "just started";
+  if (minutes < 1) return lang === "fi" ? "juuri alkanut" : lang === "es" ? "recién iniciado" : "just started";
   if (minutes < 60) return `${minutes} min`;
   return formatDuration(minutes * 60, lang);
 }
@@ -59,6 +59,7 @@ export function formatDate(iso: string | null, lang: Language = "en"): string {
   const month = d.getMonth() + 1;
   const year = d.getFullYear();
   if (lang === "fi") return `${day}.${month}.${year}`;
+  if (lang === "es") return `${day} ${["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic"][month - 1]} ${year}`;
   const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${day} ${names[month - 1]} ${year}`;
 }

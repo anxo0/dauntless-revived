@@ -1,4 +1,4 @@
-// UI text and UI decisions: both languages complete, every key the page uses exists, and the one
+// UI text and UI decisions: every language complete, every key the page uses exists, and the one
 // big button does the right thing in each phase. Also checks the real compiled-in game manifest.
 
 import { test } from "node:test";
@@ -6,14 +6,14 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { isStringKey, STRINGS, translate } from "../src/shared/i18n";
+import { isStringKey, STRINGS, systemLanguage, translate } from "../src/shared/i18n";
 import { primaryButton, stepIndex } from "../src/shared/ui-model";
-import { formatDuration, formatRunningTime } from "../src/shared/format";
+import { formatBytes, formatDate, formatDuration, formatRunningTime } from "../src/shared/format";
 import { validateManifest, manifestFingerprint } from "../src/main/manifest";
 import type { InviteError } from "../src/shared/invite";
 import type { UsernameCheck } from "../src/shared/username";
 import type { ErrorCode, NoticeCode, Snapshot } from "../src/shared/types";
-import { EXPOSURE_MODES } from "../src/shared/types";
+import { EXPOSURE_MODES, LANGUAGES } from "../src/shared/types";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 
@@ -79,15 +79,25 @@ function placeholders(text: string): string[] {
   return (text.match(/\{[a-z]+\}/g) ?? []).sort();
 }
 
-test("English and Finnish have the same keys and the same placeholders, and no empty text", () => {
+test("every language has the same keys and the same placeholders as English, and no empty text", () => {
   const en = STRINGS.en;
-  const fi = STRINGS.fi;
-  assert.deepEqual(Object.keys(fi).sort(), Object.keys(en).sort());
-  for (const k of Object.keys(en) as (keyof typeof en)[]) {
-    assert.ok(en[k].trim().length > 0, `empty English text: ${k}`);
-    assert.ok(fi[k].trim().length > 0, `empty Finnish text: ${k}`);
-    assert.deepEqual(placeholders(fi[k]), placeholders(en[k]), `placeholders differ: ${k}`);
+  for (const lang of LANGUAGES) {
+    const other = STRINGS[lang];
+    assert.deepEqual(Object.keys(other).sort(), Object.keys(en).sort(), `keys differ: ${lang}`);
+    for (const k of Object.keys(en) as (keyof typeof en)[]) {
+      assert.ok(other[k].trim().length > 0, `empty ${lang} text: ${k}`);
+      assert.deepEqual(placeholders(other[k]), placeholders(en[k]), `placeholders differ: ${lang} ${k}`);
+    }
   }
+});
+
+test("the language picker offers every language, and the system locale picks one", () => {
+  for (const lang of LANGUAGES) assert.ok(isStringKey(`lang_${lang}`), `lang_${lang}`);
+  assert.equal(systemLanguage("es-ES"), "es");
+  assert.equal(systemLanguage("es-419"), "es");
+  assert.equal(systemLanguage("fi"), "fi");
+  assert.equal(systemLanguage("en-US"), "en");
+  assert.equal(systemLanguage("de-DE"), "en");
 });
 
 test("every dynamic key family is complete", () => {
@@ -131,11 +141,14 @@ test("durations get days past 24 hours", () => {
   assert.equal(formatRunningTime("2026-09-21T11:18:00Z", now), "42 min");
   assert.equal(formatRunningTime("2026-09-21T08:55:00Z", now), "3 h 5 min");
   assert.equal(formatRunningTime("2026-09-19T08:00:00Z", now, "fi"), "2 vrk 4 t");
+  assert.equal(formatRunningTime("2026-09-19T08:00:00Z", now, "es"), "2 d 4 h");
+  assert.equal(formatRunningTime("2026-09-21T11:59:30Z", now, "es"), "recién iniciado");
 });
 
 test("translate fills placeholders", () => {
   assert.equal(translate("fi", "inst_title_hunt", { behemoth: "Shrike" }), "Metsästys: Shrike");
   assert.equal(translate("en", "err_relay_port_busy", { port: 61000 }).includes("61000"), true);
+  assert.equal(translate("es", "inst_title_hunt", { behemoth: "Shrike" }), "Cacería: Shrike");
 });
 
 function snap(over: Partial<Snapshot>): Snapshot {
@@ -148,7 +161,7 @@ function snap(over: Partial<Snapshot>): Snapshot {
     install: { dir: "C:\\g", defaultDir: "C:\\g", installed: true, missingFiles: 0, verified: true, dllsOk: true, freeBytes: 5e10, requiredBytes: 1e9, totalBytes: 1e10, vcRuntimeMissing: [], contentAvailable: true },
     task: null,
     game: { running: false, relayPort: null },
-    settings: { graphics: 4, exposure: "game", windowed: false, language: "en" },
+    settings: { graphics: 4, exposure: "game", windowed: false, language: "en", gameLanguage: "auto" },
     app: { version: "0", packaged: false, updateReady: false },
     status: null,
     statusUnsupported: false,
@@ -190,4 +203,10 @@ test("the compiled-in game manifest is the verified 1.4.4 list", () => {
   assert.equal(r.manifest.files.length, 410);
   assert.equal(r.manifest.totalBytes, 10_893_512_875);
   assert.match(manifestFingerprint(r.manifest), /^[0-9a-f]{64}$/);
+});
+
+test("Spanish uses a decimal comma and Spanish month names", () => {
+  assert.equal(formatBytes(1_500_000, "es"), "1,50 MB");
+  assert.equal(formatBytes(1_500_000, "en"), "1.50 MB");
+  assert.equal(formatDate("2026-10-09T12:00:00Z", "es"), "9 oct 2026");
 });
