@@ -1,3 +1,4 @@
+import './setup';
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 import http from 'node:http';
