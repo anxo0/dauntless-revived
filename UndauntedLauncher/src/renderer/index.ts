@@ -12,7 +12,7 @@ import { checkUsername, extractAccountKey } from "../shared/username";
 import { exposureKey, graphicsKey, primaryButton, shortFile, stepIndex, taskView, updateReason, whereKey } from "../shared/ui-model";
 import { formatBytes, formatDate, formatDuration, formatRunningTime } from "../shared/format";
 import { sortInstances, type InstanceKind, type ServerStatus, type StatusInstance } from "../shared/status";
-import { EXPOSURE_MODES, GRAPHICS_PRESETS, LANGUAGES, type Branding, type ExposureMode, type ExternalTarget, type GraphicsPreset, type Language, type LauncherError, type NewsItem, type Snapshot, type TaskProgress } from "../shared/types";
+import { EXPOSURE_MODES, GAME_LANGUAGES, GRAPHICS_PRESETS, LANGUAGES, type Branding, type ExposureMode, type ExternalTarget, type GameLanguage, type GraphicsPreset, type Language, type LauncherError, type NewsItem, type Snapshot, type TaskProgress } from "../shared/types";
 
 type View = "play" | "news" | "server" | "settings" | "partners" | "mods" | "credits";
 const VIEWS: readonly View[] = ["play", "news", "server", "settings", "partners", "mods", "credits"];
@@ -26,6 +26,7 @@ type Modal =
 const api = window.launcher;
 const ART_URL = /^dr-art:\/\/bg\/[0-9a-f]{64}$/;
 const TIME_LOCALES: Record<Language, string> = { en: "en-GB", fi: "fi-FI", es: "es-ES" };
+const GAME_LANGUAGE_NAMES: Record<Exclude<GameLanguage, "auto">, string> = { "en-US": "English", "de-DE": "Deutsch", "es-ES": "Español", "fr-FR": "Français", "it-IT": "Italiano", "ja-JP": "日本語", "pt-BR": "Português (Brasil)", "ru-RU": "Русский" };
 
 const state = {
   snap: null as Snapshot | null,
@@ -1241,7 +1242,22 @@ function renderSettings(): void {
       b.addEventListener("click", () => void api.setSettings({ language: l }));
       langRow.appendChild(b);
     }
-    const language = card("settings-section", h("h2", { class: "card-title" }, t("set_language")), langRow);
+    // The game's own text language: every language the 1.4.4 client has text for, by its own name.
+    const gameLanguage = h("select", { class: "select", id: "game-language-select", "data-fk": "game-language" });
+    for (const g of GAME_LANGUAGES) {
+      const o = h("option", { value: g }, g === "auto" ? t("game_lang_auto") : GAME_LANGUAGE_NAMES[g]);
+      if (g !== "auto") o.setAttribute("lang", g);
+      if (g === snap.settings.gameLanguage) o.selected = true;
+      gameLanguage.appendChild(o);
+    }
+    gameLanguage.addEventListener("change", () => void api.setSettings({ gameLanguage: gameLanguage.value as GameLanguage }));
+
+    const language = card(
+      "settings-section",
+      h("h2", { class: "card-title" }, t("set_language")),
+      langRow,
+      h("div", { class: "settings-row" }, h("div", { class: "settings-row-text" }, h("label", { class: "settings-row-title", for: "game-language-select" }, t("set_game_language")), h("span", { class: "settings-row-sub" }, t("set_game_language_text"))), gameLanguage),
+    );
 
     const account = card(
       "settings-section",

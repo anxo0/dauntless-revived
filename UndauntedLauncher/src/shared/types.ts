@@ -19,6 +19,11 @@ export const DEFAULT_GRAPHICS: GraphicsPreset = 4;
 export type ExposureMode = "game" | "basic";
 export const EXPOSURE_MODES: readonly ExposureMode[] = ["game", "basic"];
 
+// The game's own text language, sent to it as -epiclocale. The 1.4.4 client ships text for exactly
+// these cultures (Archon/Content/Localization/Game/<culture>); "auto" follows the operating system.
+export type GameLanguage = "auto" | "en-US" | "de-DE" | "es-ES" | "fr-FR" | "it-IT" | "ja-JP" | "pt-BR" | "ru-RU";
+export const GAME_LANGUAGES: readonly GameLanguage[] = ["auto", "en-US", "de-DE", "es-ES", "fr-FR", "it-IT", "ja-JP", "pt-BR", "ru-RU"];
+
 export type Phase =
   | "loading"
   | "join" // no server yet: paste an invite
@@ -126,6 +131,7 @@ export interface Settings {
   exposure: ExposureMode;
   windowed: boolean;
   language: Language;
+  gameLanguage: GameLanguage;
 }
 
 export interface Snapshot {

@@ -8,7 +8,7 @@ import { applyGameConfig, defaultConfigDir, rewriteEngineIniText, splitLines, sy
 import { settingsPatch } from "../src/main/ipc-validate";
 import { sanitizeSettings } from "../src/main/settings";
 import { EXPOSURE_MODES, type ExposureMode } from "../src/shared/types";
-import { buildLaunchArgs, describeLaunch, FIXED_ARGS, GameProcess, maskArgs, type SpawnFn } from "../src/main/launch";
+import { buildLaunchArgs, describeLaunch, FIXED_ARGS, GameProcess, gameLocale, maskArgs, type SpawnFn } from "../src/main/launch";
 import { addSecret, redact, setSink, log } from "../src/main/log";
 
 const KEY = "UUK_" + "0123456789abcdef".repeat(3);
@@ -188,6 +188,22 @@ test("launch args follow contract 6", () => {
   assert.throws(() => buildLaunchArgs({ host: "100.64.0.7", port: 0, key: KEY, windowed: false }));
 });
 
+test("the game language becomes -epiclocale; auto follows the system when the game has that language", () => {
+  const locale = (gameLocale: string | undefined) =>
+    buildLaunchArgs({ host: "100.64.0.7", port: 61000, key: KEY, windowed: false, gameLocale }).filter((a) => a.startsWith("-epiclocale="));
+  assert.deepEqual(locale(undefined), ["-epiclocale=en-US"]);
+  assert.deepEqual(locale("es-ES"), ["-epiclocale=es-ES"]);
+  assert.deepEqual(locale("pt-BR"), ["-epiclocale=pt-BR"]);
+  assert.deepEqual(locale("xx-XX"), ["-epiclocale=en-US"], "never an argument the game has no text for");
+  assert.equal(gameLocale("auto", "es-ES"), "es-ES");
+  assert.equal(gameLocale("auto", "es-419"), "es-ES");
+  assert.equal(gameLocale("auto", "de"), "de-DE");
+  assert.equal(gameLocale("auto", "pt-PT"), "pt-BR");
+  assert.equal(gameLocale("auto", "fi-FI"), "en-US", "no Finnish text in the game");
+  assert.equal(gameLocale("auto", ""), "en-US");
+  assert.equal(gameLocale("ja-JP", "en-US"), "ja-JP", "a chosen language wins over the system");
+});
+
 test("the key is masked in anything that can be logged", () => {
   const args = buildLaunchArgs({ host: "100.64.0.7", port: 61000, key: KEY, windowed: false });
   const masked = maskArgs(args);
@@ -312,6 +328,14 @@ test("exposure setting defaults to the game and rejects unexpected renderer valu
   assert.equal(sanitizeSettings({ exposure: "manual" }, "en").exposure, "game");
   assert.deepEqual(settingsPatch({ exposure: "basic" }), { exposure: "basic" });
   assert.equal(settingsPatch({ exposure: "manual" }), null);
+});
+
+test("game language setting defaults to automatic and rejects unexpected renderer values", () => {
+  assert.equal(sanitizeSettings({}, "en").gameLanguage, "auto");
+  assert.equal(sanitizeSettings({ gameLanguage: "ru-RU" }, "en").gameLanguage, "ru-RU");
+  assert.equal(sanitizeSettings({ gameLanguage: "fi-FI" }, "en").gameLanguage, "auto");
+  assert.deepEqual(settingsPatch({ gameLanguage: "es-ES" }), { gameLanguage: "es-ES" });
+  assert.equal(settingsPatch({ gameLanguage: "es" }), null);
 });
 
 test("stored game folders stay native to the host platform", () => {

@@ -55,7 +55,7 @@ function temp(prefix: string): string {
 before(async () => {
   cert = makeTestCert();
   other = makeTestCert();
-  meta = new FakeMetagame({ name: "Friday Hunts", validCodes: new Set(["ABCD-EFGH-JKLM", "SECOND-CODE", "THIRD-CODE", "FOURTH-CODE", "FIFTH-CODE", "SIXTH-CODE", "EXPOSURE-CODE", "EXISTING-CODE", "PICKED-CODE"]) });
+  meta = new FakeMetagame({ name: "Friday Hunts", validCodes: new Set(["ABCD-EFGH-JKLM", "SECOND-CODE", "THIRD-CODE", "FOURTH-CODE", "FIFTH-CODE", "SIXTH-CODE", "EXPOSURE-CODE", "GAMELANG-CODE", "EXISTING-CODE", "PICKED-CODE"]) });
   content = new FakeContentServer({ key: "unused", files });
   gateway = https.createServer({ cert: cert.certPem, key: cert.keyPem }, (req, res) => {
     gatewayRequests.push(`${req.method} ${req.url}`);
@@ -237,6 +237,25 @@ test("public mode end to end: join, register, install, play through the relay, g
   assert.deepEqual(rejected, {ok:false,error:{code:'key_rejected'}});
   assert.equal(hx.spawns.length, 2, 'rejected key never starts a game process');
   meta.users.set(key, storedUser);
+  await hx.c.shutdown();
+});
+
+test("game language: automatic by default, stored when chosen, an unknown value changes nothing, sent as -epiclocale at PLAY", async () => {
+  const hx = harness();
+  await hx.c.init();
+  assert.deepEqual(await hx.c.submitInvite(invite(cert.fingerprint, "GAMELANG-CODE")), { ok: true });
+  assert.deepEqual(await hx.c.register("GameLang_1"), { ok: true, username: "GameLang_1" });
+  assert.deepEqual(await hx.c.startInstall(), { ok: true });
+  assert.equal(hx.last().settings.gameLanguage, "auto");
+
+  assert.equal((await hx.c.setSettings({ gameLanguage: "es-ES" })).gameLanguage, "es-ES");
+  assert.equal((await hx.c.setSettings({ gameLanguage: "xx-XX" } as never)).gameLanguage, "es-ES", "an unknown value is ignored");
+  assert.equal(JSON.parse(readFileSync(path.join(hx.userData, "settings.json"), "utf8")).gameLanguage, "es-ES");
+
+  assert.deepEqual(await hx.c.play(), { ok: true });
+  assert.ok(hx.spawns.at(-1)!.args.includes("-epiclocale=es-ES"), hx.spawns.at(-1)!.args.join(" "));
+  hx.child()!.emit("exit", 0);
+  await new Promise((r) => setTimeout(r, 100));
   await hx.c.shutdown();
 });
 

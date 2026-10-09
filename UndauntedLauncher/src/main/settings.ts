@@ -4,7 +4,7 @@ import { promises as fsp, readFileSync } from "node:fs";
 import path from "node:path";
 import { isPrivateModeHost, isValidFingerprint, isValidHost, isValidInviteCode, isValidShareUrl, cleanServerName, type ServerMode } from "../shared/invite";
 import { isValidUsername } from "../shared/username";
-import { DEFAULT_GRAPHICS, EXPOSURE_MODES, GRAPHICS_PRESETS, LANGUAGES, type ExposureMode, type GraphicsPreset, type Language } from "../shared/types";
+import { DEFAULT_GRAPHICS, EXPOSURE_MODES, GAME_LANGUAGES, GRAPHICS_PRESETS, LANGUAGES, type ExposureMode, type GameLanguage, type GraphicsPreset, type Language } from "../shared/types";
 
 export interface StoredServer {
   mode: ServerMode;
@@ -26,6 +26,7 @@ export interface StoredSettings {
   exposure: ExposureMode;
   windowed: boolean;
   language: Language;
+  gameLanguage: GameLanguage;
   usernames: Record<string, string>; // per server id, for display only
   backupOffered: Record<string, boolean>; // per server id: the one-time backup offer was shown
 }
@@ -40,6 +41,7 @@ export function defaultSettings(language: Language): StoredSettings {
     exposure: "game",
     windowed: false,
     language,
+    gameLanguage: "auto",
     usernames: {},
     backupOffered: {},
   };
@@ -87,6 +89,7 @@ export function sanitizeSettings(raw: unknown, language: Language, platform: Nod
   s.windowed = raw.windowed === true;
   if (raw.huntRegion === 'auto' || raw.huntRegion === 'main' || raw.huntRegion === 'aus' || raw.huntRegion === 'ger') s.huntRegion = raw.huntRegion;
   if (LANGUAGES.includes(raw.language as Language)) s.language = raw.language as Language;
+  if (GAME_LANGUAGES.includes(raw.gameLanguage as GameLanguage)) s.gameLanguage = raw.gameLanguage as GameLanguage;
   if (isObject(raw.usernames)) {
     for (const [k, v] of Object.entries(raw.usernames)) if (/^[0-9a-f]{24}$/.test(k) && isValidUsername(v)) s.usernames[k] = v;
   }

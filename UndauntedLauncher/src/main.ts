@@ -357,6 +357,7 @@ function makePlatform(): Platform {
     appVersion: app.getVersion(),
     packaged: app.isPackaged,
     defaultLanguage: systemLanguage(app.getLocale()),
+    systemLocale: app.getLocale(),
     relayPort,
     encryptor: {
       isAvailable: () => safeStorage.isEncryptionAvailable(),
