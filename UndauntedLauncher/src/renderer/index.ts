@@ -1176,6 +1176,100 @@ function settingsRow(title: string, sub: string | null, ...actions: (HTMLElement
   );
 }
 
+interface DropdownOption<T> {
+  value: T;
+  label: string;
+  lang?: string;
+}
+
+// A select in the launcher's own style: the native <select> opens a list drawn by Windows. A button
+// (the closed look of .select, so <label for> still points at it) and a listbox, with the keys a
+// select has: Up/Down/Home/End move, Enter/Space choose, Escape and Tab close, typing a letter jumps.
+function dropdown<T extends string | number>(opts: { id: string; fk: string; value: T; options: DropdownOption<T>[]; onChange: (v: T) => void; disabled?: boolean }): HTMLElement {
+  const current = opts.options.find((o) => o.value === opts.value) ?? opts.options[0];
+  const listId = `${opts.id}-list`;
+  const btn = h("button", { type: "button", class: "select dropdown-button", id: opts.id, "data-fk": opts.fk, "aria-haspopup": "listbox", "aria-expanded": "false", "aria-controls": listId, disabled: opts.disabled }, current.label);
+  if (current.lang) btn.setAttribute("lang", current.lang);
+  const list = h("ul", { class: "dropdown-list", id: listId, role: "listbox", tabindex: "-1", hidden: true });
+  const items = opts.options.map((o, i) => {
+    const li = h("li", { class: "dropdown-option", role: "option", id: `${opts.id}-opt-${i}`, "aria-selected": o.value === current.value ? "true" : "false", lang: o.lang }, o.label);
+    li.addEventListener("mousedown", (e) => e.preventDefault()); // keep focus on the list
+    li.addEventListener("click", () => choose(i));
+    li.addEventListener("mousemove", () => highlight(i));
+    list.appendChild(li);
+    return li;
+  });
+  const wrap = h("div", { class: "dropdown" }, btn, list);
+  let active = Math.max(0, opts.options.indexOf(current));
+
+  function highlight(i: number): void {
+    active = (i + items.length) % items.length;
+    items.forEach((li, j) => li.classList.toggle("active", j === active));
+    list.setAttribute("aria-activedescendant", items[active].id);
+    items[active].scrollIntoView({ block: "nearest" });
+  }
+  function onOutside(e: MouseEvent): void {
+    if (!wrap.contains(e.target as Node)) close(false);
+  }
+  function open(): void {
+    if (opts.disabled || !list.hidden) return;
+    list.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    // Open upwards when there is no room below (the language card sits at the bottom of the page).
+    const below = window.innerHeight - btn.getBoundingClientRect().bottom;
+    wrap.classList.toggle("dropdown-up", below < list.offsetHeight + 12);
+    highlight(Math.max(0, opts.options.indexOf(current)));
+    list.focus();
+    document.addEventListener("mousedown", onOutside, true);
+  }
+  function close(refocus: boolean): void {
+    if (list.hidden) return;
+    list.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    document.removeEventListener("mousedown", onOutside, true);
+    if (refocus) btn.focus();
+  }
+  function choose(i: number): void {
+    close(true);
+    const o = opts.options[i];
+    if (o && o.value !== current.value) opts.onChange(o.value);
+  }
+
+  btn.addEventListener("click", () => (list.hidden ? open() : close(true)));
+  btn.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      open();
+    }
+  });
+  list.addEventListener("keydown", (e) => {
+    const moves: Record<string, () => number> = { ArrowDown: () => active + 1, ArrowUp: () => active - 1, Home: () => 0, End: () => items.length - 1 };
+    if (moves[e.key]) {
+      e.preventDefault();
+      highlight(moves[e.key]());
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      choose(active);
+    } else if (e.key === "Escape") {
+      e.preventDefault(); // so Escape closes the list, not the page behind it
+      e.stopPropagation();
+      close(true);
+    } else if (e.key === "Tab") {
+      close(false);
+    } else if (e.key.length === 1) {
+      const k = e.key.toLowerCase();
+      const next = opts.options.findIndex((o, j) => j > active && o.label.toLowerCase().startsWith(k));
+      const first = opts.options.findIndex((o) => o.label.toLowerCase().startsWith(k));
+      if (next >= 0 || first >= 0) highlight(next >= 0 ? next : first);
+    }
+  });
+  // Focus leaving the list closes it; a click on the button closes it through the button instead.
+  list.addEventListener("blur", (e) => {
+    if (e.relatedTarget !== btn) close(false);
+  });
+  return wrap;
+}
+
 function renderSettings(): void {
   const container = $("#view-settings");
   const snap = state.snap;
@@ -1184,34 +1278,35 @@ function renderSettings(): void {
   renderRegion(container, sig, () => {
     const busy = snap.busy || snap.task !== null || snap.game.running;
 
-    const select = h("select", { class: "select", id: "gfx-select", "data-fk": "gfx" });
-    for (const g of GRAPHICS_PRESETS) {
-      const o = h("option", { value: String(g) }, t(graphicsKey(g)));
-      if (g === snap.settings.graphics) o.selected = true;
-      select.appendChild(o);
-    }
-    select.addEventListener("change", () => void api.setSettings({ graphics: Number(select.value) as GraphicsPreset }));
+    const select = dropdown<GraphicsPreset>({
+      id: "gfx-select",
+      fk: "gfx",
+      value: snap.settings.graphics,
+      options: GRAPHICS_PRESETS.map((g) => ({ value: g, label: t(graphicsKey(g)) })),
+      onChange: (graphics) => void api.setSettings({ graphics }),
+    });
 
     // Auto exposure (roadmap 4.17): "game" by default; "basic" is the opt-in experiment for the airship.
-    const exposure = h("select", { class: "select", id: "exposure-select", "data-fk": "exposure" });
-    for (const m of EXPOSURE_MODES) {
-      const o = h("option", { value: m }, t(exposureKey(m)));
-      if (m === snap.settings.exposure) o.selected = true;
-      exposure.appendChild(o);
-    }
-    exposure.addEventListener("change", () => void api.setSettings({ exposure: exposure.value as ExposureMode }));
+    const exposure = dropdown<ExposureMode>({
+      id: "exposure-select",
+      fk: "exposure",
+      value: snap.settings.exposure,
+      options: EXPOSURE_MODES.map((m) => ({ value: m, label: t(exposureKey(m)) })),
+      onChange: (exposure) => void api.setSettings({ exposure }),
+    });
 
     const windowed = h("button", { type: "button", class: "switch", role: "switch", "aria-checked": snap.settings.windowed ? "true" : "false", "aria-labelledby": "windowed-label", "data-fk": "windowed" });
     windowed.addEventListener("click", () => void api.setSettings({ windowed: !snap.settings.windowed }));
 
-    const huntRegion = h('select', {class:'select',id:'hunt-region','data-fk':'hunt-region'});
-    for (const [value,label] of [['auto','Automatic (closest region)'],['main','EU'],['aus','Australia (OCE)'],['ger','Germany']]) {
-      const option = h('option',{value},label);
-      option.selected = value === (snap.settings.huntRegion ?? 'auto');
-      huntRegion.appendChild(option);
-    }
-    huntRegion.disabled = busy;
-    huntRegion.addEventListener('change',()=>void api.setSettings({huntRegion:huntRegion.value as 'auto'|'main'|'aus'|'ger'}));
+    type HuntRegion = 'auto' | 'main' | 'aus' | 'ger';
+    const huntRegion = dropdown<HuntRegion>({
+      id: 'hunt-region',
+      fk: 'hunt-region',
+      value: snap.settings.huntRegion ?? 'auto',
+      options: [{ value: 'auto', label: 'Automatic (closest region)' }, { value: 'main', label: 'EU' }, { value: 'aus', label: 'Australia (OCE)' }, { value: 'ger', label: 'Germany' }],
+      onChange: (huntRegion) => void api.setSettings({ huntRegion }),
+      disabled: busy,
+    });
 
     const game = card(
       "settings-section",
@@ -1243,14 +1338,13 @@ function renderSettings(): void {
       langRow.appendChild(b);
     }
     // The game's own text language: every language the 1.4.4 client has text for, by its own name.
-    const gameLanguage = h("select", { class: "select", id: "game-language-select", "data-fk": "game-language" });
-    for (const g of GAME_LANGUAGES) {
-      const o = h("option", { value: g }, g === "auto" ? t("game_lang_auto") : GAME_LANGUAGE_NAMES[g]);
-      if (g !== "auto") o.setAttribute("lang", g);
-      if (g === snap.settings.gameLanguage) o.selected = true;
-      gameLanguage.appendChild(o);
-    }
-    gameLanguage.addEventListener("change", () => void api.setSettings({ gameLanguage: gameLanguage.value as GameLanguage }));
+    const gameLanguage = dropdown<GameLanguage>({
+      id: "game-language-select",
+      fk: "game-language",
+      value: snap.settings.gameLanguage,
+      options: GAME_LANGUAGES.map((g) => (g === "auto" ? { value: g, label: t("game_lang_auto") } : { value: g, label: GAME_LANGUAGE_NAMES[g], lang: g })),
+      onChange: (gameLanguage) => void api.setSettings({ gameLanguage }),
+    });
 
     const language = card(
       "settings-section",
