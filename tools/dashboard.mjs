@@ -175,7 +175,7 @@ export async function startDashboard({key, backend, port = 61110, logs = {}, ser
         if (!body || !Number.isInteger(body.uses) || body.uses < 1 || body.uses > 100 || typeof body.name !== 'string' || body.name.length > 100 || /[\x00-\x1f]/.test(body.name)) { res.writeHead(400).end(); return; }
         inviteCount++;
         submitted = true;
-        const response = await fetcher(new URL('/undaunted/api/CreateInvite', target), {method: 'POST', headers: {'x-undaunted-user-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({uses: body.uses, name: body.name}), signal: AbortSignal.timeout(5000), redirect: 'error'});
+        const response = await fetcher(new URL('/undaunted/api/CreateInvite', target), {method: 'POST', headers: {'x-undaunted-user-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({uses: body.uses, name: body.name}), signal: AbortSignal.timeout(15000), redirect: 'error'});
         if (!response.ok) { res.writeHead(response.status === 429 ? 429 : 502).end(JSON.stringify({error: 'Backend refused invite creation.'})); return; }
         const result = await response.json();
         if (!/^[A-Za-z0-9-]{4,64}$/.test(result.code || '')) throw new Error('Invalid invite response');

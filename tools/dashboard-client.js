@@ -197,7 +197,7 @@
     el('createInvite').disabled = true; el('copyInvite').disabled = true; el('inviteLink').value = '';
     el('inviteStatus').textContent = 'Creating invite…';
     try {
-      const response = await fetch('/api/invites', {method: 'POST', headers: {'x-dashboard-key': key, 'content-type': 'application/json'}, body: JSON.stringify({name: el('inviteName').value.trim(), uses: Number(el('inviteUses').value)}), signal: AbortSignal.timeout(8000)});
+      const response = await fetch('/api/invites', {method: 'POST', headers: {'x-dashboard-key': key, 'content-type': 'application/json'}, body: JSON.stringify({name: el('inviteName').value.trim(), uses: Number(el('inviteUses').value)}), signal: AbortSignal.timeout(20000)});
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Invite request refused (${response.status}).`);
       el('inviteLink').value = result.invite; el('copyInvite').disabled = false;
