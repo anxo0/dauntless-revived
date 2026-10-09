@@ -153,3 +153,17 @@ test('account proxy strips unexpected fields, validates paging, and preserves un
     assert.match(status.sample.healthError, /BACKEND_HEALTH/);
   } finally { await new Promise(resolve => server.close(resolve)); }
 });
+
+test('account recovery requires owner authentication and is never cached',async()=>{
+ const key='test-recovery-owner-key';let recovered=0;
+ const server=await startDashboard({key,port:0,backend:'http://127.0.0.1:61000',fetcher:async url=>{
+   if(url.pathname.startsWith('/undaunted/api/AccountRecovery/')){recovered++;return {status:200,json:async()=>({accountId:'UID-test',key:'fixture-login-key'})};}
+   return {ok:true,json:async()=>({Users:[],players:[],instances:[],playersOnline:0})};
+ }});
+ try {
+   const base=`http://127.0.0.1:${server.address().port}`,route='/api/account-key?accountId=UID-test';
+   assert.equal((await fetch(base+route)).status,401);assert.equal(recovered,0);
+   const response=await fetch(base+route,{headers:{'x-dashboard-key':key}});
+   assert.equal(response.headers.get('cache-control'),'no-store');assert.equal((await response.json()).key,'fixture-login-key');assert.equal(recovered,1);
+ }finally{await new Promise(resolve=>server.close(resolve));}
+});

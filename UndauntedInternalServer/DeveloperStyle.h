@@ -9,7 +9,7 @@
 namespace DeveloperStyle {
 inline bool IsDeveloper(const SDK::FString& Name) {
     const auto Value=Name.ToString();
-    return Value=="TFBT" || Value=="TFBTA";
+    return Value=="TFBT" || Value=="TFBTA" || Value=="ZFXSTATIC";
 }
 inline void Text(SDK::UTextBlock* Block,const std::wstring& Value) {
     if(!Block)return;

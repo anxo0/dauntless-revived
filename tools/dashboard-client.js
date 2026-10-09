@@ -138,6 +138,16 @@
     const visible=accountPage.filter(a => `${a.name} ${a.id} ${a.keyFingerprint || ''}`.toLowerCase().includes(query));
     table('accountRows',visible.map(a => [a.name,a.id,a.developer?'Server Developer':a.admin?'Administrator':'Player',a.keyFingerprint || 'No active key']));
     Array.from(el('accountRows').children).forEach((row,i)=>{
+      const account=visible[i],cell=row.children[3];
+      const reveal=document.createElement('button');reveal.textContent='Show login key';
+      reveal.onclick=async()=>{
+        reveal.disabled=true;
+        try {
+          const result=await get('/api/account-key?accountId='+encodeURIComponent(account.id));
+          cell.textContent=result.key || 'No recovery copy yet. Original keys were stored as hashes; a successful launcher sign-in saves a recovery copy.';
+        } catch {cell.textContent='Recovery unavailable. Try again.';}
+      };
+      cell.append(document.createTextNode(' '),reveal);
       if(!visible[i]?.developer)return;
       row.classList.add('developer-row');
       const role=row.children[2];role.textContent='';

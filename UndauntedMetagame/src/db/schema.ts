@@ -106,7 +106,8 @@ export const inventorytransactions = sqliteTable("inventorytransactions", {
     response: text("response").notNull(),
     createdDate: text("createdDate").notNull()
 }, (table) => [
-    uniqueIndex("inventorytransactions_character_transaction_request").on(table.characterId, table.transactionId, table.requestHash)
+    uniqueIndex("inventorytransactions_character_transaction_request").on(table.characterId, table.transactionId, table.requestHash),
+    index("inventorytransactions_created_date").on(table.createdDate)
 ]);
 
 // Append-only log of every item change (triggers in the migration refuse UPDATE and DELETE)
@@ -463,4 +464,10 @@ export const slayerlinks = sqliteTable("slayerlinks", {
 export const onetimejobs = sqliteTable("onetimejobs", {
     jobId: text("jobId").notNull().primaryKey(),
     doneDate: text("doneDate").notNull()
+});
+
+export const accountkeyrecovery = sqliteTable("accountkeyrecovery", {
+    userId: text("userId").notNull().primaryKey(),
+    keyHash: text("keyHash").notNull(),
+    ciphertext: text("ciphertext").notNull()
 });

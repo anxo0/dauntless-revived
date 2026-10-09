@@ -77,6 +77,7 @@ import {
 
 export interface Platform {
   userDataDir: string;
+  documentsDir?: string;
   resourcesDir: string;
   runtimeFilesExist?: (file: string) => boolean;
 
@@ -165,7 +166,7 @@ export class Controller {
 
   constructor(private readonly p: Platform) {
     this.settings = new SettingsStore(p.userDataDir, p.defaultLanguage, p.hostPlatform ?? process.platform);
-    this.keys = new KeyStore(path.join(p.userDataDir, "keys"), p.encryptor);
+    this.keys = new KeyStore(path.join(p.userDataDir, "keys"), p.encryptor, p.documentsDir ? path.join(p.documentsDir, "Dauntless Revived", "Account Keys") : undefined);
     this.game = new GameProcess(p.spawn);
     this.verified = new VerifiedCache(path.join(p.userDataDir, "verified-files.json"));
     this.game.onChange((running, code) => {

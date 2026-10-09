@@ -44,6 +44,7 @@ if (
 
 // Every renderer runs in the Chromium sandbox, whatever a window's own options say.
 app.enableSandbox();
+if (process.argv.includes("--safe-mode")) app.disableHardwareAcceleration();
 nativeTheme.themeSource = "dark";
 app.setAppUserModelId(process.platform === "win32" && app.isPackaged ? `com.squirrel.${SQUIRREL_NAME}.${SQUIRREL_NAME}` : APP_ID);
 
@@ -160,6 +161,18 @@ function createWindow(): void {
   });
   mainWindow.removeMenu();
   mainWindow.once("ready-to-show", () => mainWindow?.show());
+  const window = mainWindow;
+  const showTimer = setTimeout(() => { if (!window.isDestroyed()) window.show(); }, 10000);
+  window.once("closed", () => clearTimeout(showTimer));
+  window.webContents.on("render-process-gone", (_event, details) => {
+    log.error(`launcher renderer stopped: ${details.reason}`);
+    if (!process.argv.includes("--safe-mode") && !controller?.relayActive) {
+      app.relaunch({args: [...process.argv.slice(1), "--safe-mode"]});
+      app.exit(0);
+    } else {
+      dialog.showErrorBox("Dauntless Revived could not open", "The launcher renderer stopped. Reinstall the latest launcher and send the launcher logs to support.");
+    }
+  });
   mainWindow.on("maximize", () => mainWindow?.webContents.send(IPC.windowState, true));
   mainWindow.on("unmaximize", () => mainWindow?.webContents.send(IPC.windowState, false));
 
@@ -188,8 +201,11 @@ function createWindow(): void {
     mainWindow = null;
   });
 
-  if (DEV_SERVER_URL) void mainWindow.loadURL(DEV_SERVER_URL);
-  else void mainWindow.loadFile(RENDERER_INDEX);
+  const loaded = DEV_SERVER_URL ? mainWindow.loadURL(DEV_SERVER_URL) : mainWindow.loadFile(RENDERER_INDEX);
+  void loaded.catch((error) => {
+    log.error(`launcher page failed: ${describeError(error)}`);
+    dialog.showErrorBox("Dauntless Revived could not open", "The launcher page could not load. Reinstall the latest launcher. Your account and game files are kept.");
+  });
 }
 
 function hardenSessions(): void {
@@ -351,6 +367,7 @@ function makePlatform(): Platform {
   if (relayPort !== undefined) log.warn(`relay port overridden to ${relayPort}`);
   return {
     userDataDir: app.getPath("userData"),
+    documentsDir: app.getPath("documents"),
     resourcesDir: resourcesDir(),
     defaultInstallDir,
     hostPlatform: process.platform,
@@ -486,6 +503,10 @@ if (!started) {
           logger: { log: (m) => log.info(`update: ${m}`), info: (m) => log.info(`update: ${m}`), warn: (m) => log.warn(`update: ${m}`), error: (m) => log.error(`update: ${m}`) },
         });
       }
+    }).catch((error) => {
+      log.error(`launcher startup failed: ${describeError(error)}`);
+      dialog.showErrorBox("Dauntless Revived could not open", `Startup failed. Send the launcher logs to support.\n${describeError(error)}`);
+      app.exit(1);
     });
 
     app.on("before-quit", () => {

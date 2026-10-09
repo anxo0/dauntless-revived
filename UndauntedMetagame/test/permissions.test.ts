@@ -347,7 +347,8 @@ const EXPECTED_ROUTES = [
     // Guild fallbacks on the host (the gateway does not pass /undaunted/api/* except the four public ones)
     "POST /undaunted/api/GuildInvite [HasUndauntedUserApiKey]",
     "POST /undaunted/api/DisbandGuild [HasUndauntedAdminApiKey]",
-    "GET /undaunted/api/Guilds [HasUndauntedAdminApiKey]"
+    "GET /undaunted/api/Guilds [HasUndauntedAdminApiKey]",
+    "GET /undaunted/api/AccountRecovery/:userId [HasUndauntedAdminApiKey]"
 ];
 
 function RegisteredRoutes(){
@@ -503,6 +504,7 @@ const ADMIN_ROUTES = (): [string, string, unknown][] => [
 
     ["GET", "/undaunted/api/BackendHealth", undefined],
     ["GET", "/undaunted/api/DashboardAccounts", undefined],
+    ["GET", "/undaunted/api/AccountRecovery/UID-example", undefined],
     ["GET", `/undaunted/api/Moderation/${C}`, undefined],
     ["POST", "/undaunted/api/Moderation", {accountId:C,reason:'test',active:false}],
     ["POST", "/undaunted/api/RegisterInviteCode", { NewInviteCode: "PERM-TEST-CODE", Uses: 1 }],

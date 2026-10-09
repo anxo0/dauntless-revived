@@ -128,6 +128,16 @@ export async function startDashboard({key, backend, port = 61110, logs = {}, ser
       }catch{res.writeHead(502).end(JSON.stringify({error:'Moderation request failed. Refresh status before retrying.'}));}
       return;
     }
+    if (req.url?.startsWith('/api/account-key?')) {
+      res.setHeader('Cache-Control','no-store');
+      const id=new URL(req.url,'http://localhost').searchParams.get('accountId');
+      if(!id || !/^UID-[A-Za-z0-9-]{1,100}$/.test(id)){res.writeHead(400).end();return;}
+      try {
+        const response=await fetcher(new URL(`/undaunted/api/AccountRecovery/${encodeURIComponent(id)}`,target),{headers:{'x-undaunted-user-api-key':key},signal:AbortSignal.timeout(8000),redirect:'error'});
+        res.writeHead(response.status).end(JSON.stringify(await response.json()));
+      } catch {res.writeHead(503).end(JSON.stringify({error:'Account recovery unavailable.'}));}
+      return;
+    }
     if (req.url?.startsWith('/api/accounts?')) {
       const params=new URL(req.url,'http://localhost').searchParams;
       const query=(params.get('q') || '').trim();

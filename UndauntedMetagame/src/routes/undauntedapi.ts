@@ -1,3 +1,4 @@
+import {RecoverAccountKey} from "../controllers/accountrecovery";
 import {RegionProbes} from '../controllers/regionprobes';
 import { DiscordKeyStats } from '../controllers/discordstats';
 import { GetHuntRegion, SaveHuntRegion } from '../controllers/regionpreferences';
@@ -740,4 +741,12 @@ undauntedApiRouter.get("/Guilds", HasUndauntedAdminApiKey, (req: any, res) => {
 
     res.status(200);
     res.json(ListGuilds());
+});
+
+undauntedApiRouter.get('/AccountRecovery/:userId', HealthReadRateLimit, HasUndauntedAdminApiKey, (req,res)=>{
+    res.setHeader('Cache-Control','no-store');
+    const id=String(req.params.userId);
+    if(!/^UID-[A-Za-z0-9-]{1,100}$/.test(id)){res.status(400).end();return;}
+    try {res.json({accountId:id,key:RecoverAccountKey(id)});}
+    catch {res.status(503).json({error:'recovery_unavailable'});}
 });

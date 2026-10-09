@@ -176,6 +176,20 @@
       "when": 1791800000000,
       "tag": "0024_ephemeral_addresses",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1791900000000,
+      "tag": "0025_inventory_expiry_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1792000000000,
+      "tag": "0026_account_key_recovery",
+      "breakpoints": true
     }
   ]
 }
