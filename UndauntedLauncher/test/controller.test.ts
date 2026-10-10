@@ -55,7 +55,7 @@ function temp(prefix: string): string {
 before(async () => {
   cert = makeTestCert();
   other = makeTestCert();
-  meta = new FakeMetagame({ name: "Friday Hunts", validCodes: new Set(["ABCD-EFGH-JKLM", "SECOND-CODE", "THIRD-CODE", "FOURTH-CODE", "FIFTH-CODE", "SIXTH-CODE", "EXPOSURE-CODE", "GAMELANG-CODE", "EXISTING-CODE", "PICKED-CODE"]) });
+  meta = new FakeMetagame({ name: "Friday Hunts", validCodes: new Set(["ABCD-EFGH-JKLM", "SECOND-CODE", "THIRD-CODE", "FOURTH-CODE", "FIFTH-CODE", "SIXTH-CODE", "EXPOSURE-CODE", "GAMELANG-CODE", "CONSOLE-CODE", "EXISTING-CODE", "PICKED-CODE"]) });
   content = new FakeContentServer({ key: "unused", files });
   gateway = https.createServer({ cert: cert.certPem, key: cert.keyPem }, (req, res) => {
     gatewayRequests.push(`${req.method} ${req.url}`);
@@ -83,7 +83,7 @@ after(async () => {
 interface Harness {
   c: Controller;
   last: () => Snapshot;
-  spawns: { exe: string; args: string[]; cwd: string }[];
+  spawns: { exe: string; args: string[]; cwd: string; env?: NodeJS.ProcessEnv }[];
   child: () => EventEmitter | null;
   configDir: string;
   installDir: string;
@@ -96,8 +96,8 @@ function harness(relayPort = RELAY_PORT, userDataDir?: string, chooseFolder: Pla
   let snap: Snapshot | null = null;
   const spawns: Harness["spawns"] = [];
   let child: EventEmitter | null = null;
-  const fakeSpawn = ((exe: string, args: string[], opts: { cwd: string }) => {
-    spawns.push({ exe, args, cwd: opts.cwd });
+  const fakeSpawn = ((exe: string, args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv }) => {
+    spawns.push({ exe, args, cwd: opts.cwd, env: opts.env });
     child = new EventEmitter();
     const c = child;
     setImmediate(() => c.emit("spawn"));
@@ -254,6 +254,28 @@ test("game language: automatic by default, stored when chosen, an unknown value 
 
   assert.deepEqual(await hx.c.play(), { ok: true });
   assert.ok(hx.spawns.at(-1)!.args.includes("-epiclocale=es-ES"), hx.spawns.at(-1)!.args.join(" "));
+  hx.child()!.emit("exit", 0);
+  await new Promise((r) => setTimeout(r, 100));
+  await hx.c.shutdown();
+});
+
+test("log window: hidden by default; when shown, the game gets DR_SHOW_CONSOLE=1 at PLAY", async () => {
+  const hx = harness();
+  await hx.c.init();
+  assert.deepEqual(await hx.c.submitInvite(invite(cert.fingerprint, "CONSOLE-CODE")), { ok: true });
+  assert.deepEqual(await hx.c.register("Console_1"), { ok: true, username: "Console_1" });
+  assert.deepEqual(await hx.c.startInstall(), { ok: true });
+  assert.equal(hx.last().settings.showConsole, false);
+
+  assert.deepEqual(await hx.c.play(), { ok: true });
+  assert.equal(hx.spawns.at(-1)!.env?.DR_SHOW_CONSOLE, undefined, "hidden unless asked for");
+  hx.child()!.emit("exit", 0);
+  await new Promise((r) => setTimeout(r, 100));
+
+  assert.equal((await hx.c.setSettings({ showConsole: true })).showConsole, true);
+  assert.equal(JSON.parse(readFileSync(path.join(hx.userData, "settings.json"), "utf8")).showConsole, true);
+  assert.deepEqual(await hx.c.play(), { ok: true });
+  assert.equal(hx.spawns.at(-1)!.env?.DR_SHOW_CONSOLE, "1");
   hx.child()!.emit("exit", 0);
   await new Promise((r) => setTimeout(r, 100));
   await hx.c.shutdown();

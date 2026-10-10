@@ -201,7 +201,7 @@ const en = {
   ready_change: "Change",
 
   running_title: "Have a good hunt!",
-  running_text: "Dauntless is running. A console window opens next to the game: leave it open. PLAY comes back here when the game closes.",
+  running_text: "Dauntless is running. PLAY comes back here when the game closes.",
 
   sp_title: "Server",
   sp_online: "Online",
@@ -276,6 +276,9 @@ const en = {
   set_game_language_text: "The language of the game's own menus and text. Automatic follows Windows, or English if the game has no text in that language. Takes effect next launch.",
   game_lang_auto: "Automatic (Windows language)",
   set_account: "Account",
+  set_troubleshooting: "Troubleshooting",
+  set_show_console: "Show the log window",
+  set_show_console_text: "The game's log window is hidden while you play. Turn this on to see it when something goes wrong; closing it closes the game. Takes effect next launch.",
   set_signed_in: "Signed in as {user} on {name}",
   set_not_signed: "Not signed in",
   set_backup: "Save a backup of your key…",
@@ -654,7 +657,7 @@ const fi: Record<StringKey, string> = {
   ready_change: "Muuta",
 
   running_title: "Hyvää metsästystä!",
-  running_text: "Dauntless on käynnissä. Pelin viereen aukeaa konsoli-ikkuna: jätä se auki. PELAA-painike palaa tänne, kun peli sulkeutuu.",
+  running_text: "Dauntless on käynnissä. PELAA-painike palaa tänne, kun peli sulkeutuu.",
 
   sp_title: "Palvelin",
   sp_online: "Verkossa",
@@ -729,6 +732,9 @@ const fi: Record<StringKey, string> = {
   set_game_language_text: "Pelin omien valikoiden ja tekstien kieli. Automaattinen käyttää Windowsin kieltä tai englantia, jos peliä ei ole käännetty sille. Tulee voimaan seuraavalla käynnistyksellä.",
   game_lang_auto: "Automaattinen (Windowsin kieli)",
   set_account: "Tili",
+  set_troubleshooting: "Vianmääritys",
+  set_show_console: "Näytä lokiruutu",
+  set_show_console_text: "Pelin lokiruutu on piilossa pelatessa. Ota tämä käyttöön, kun haluat nähdä sen ongelmatilanteessa; sen sulkeminen sulkee pelin. Tulee voimaan seuraavalla käynnistyksellä.",
   set_signed_in: "Olet kirjautunut palvelimelle {name} nimellä {user}",
   set_not_signed: "Et ole kirjautunut",
   set_backup: "Tallenna avaimesta varmuuskopio…",
@@ -1104,7 +1110,7 @@ const es: Record<StringKey, string> = {
   ready_change: "Cambiar",
 
   running_title: "¡Buena cacería!",
-  running_text: "Dauntless está en marcha. Junto al juego se abre una ventana de consola: déjala abierta. JUGAR vuelve a aparecer aquí cuando se cierra el juego.",
+  running_text: "Dauntless está en marcha. JUGAR vuelve a aparecer aquí cuando se cierra el juego.",
 
   sp_title: "Servidor",
   sp_online: "En línea",
@@ -1179,6 +1185,9 @@ const es: Record<StringKey, string> = {
   set_game_language_text: "El idioma de los menús y textos del propio juego. Automático sigue el idioma de Windows, o inglés si el juego no tiene ese idioma. Se aplica en el próximo inicio.",
   game_lang_auto: "Automático (idioma de Windows)",
   set_account: "Cuenta",
+  set_troubleshooting: "Solución de problemas",
+  set_show_console: "Mostrar la ventana de registro",
+  set_show_console_text: "La ventana de registro del juego está oculta mientras juegas. Actívala para verla si algo falla; cerrarla cierra el juego. Se aplica en el próximo inicio.",
   set_signed_in: "Sesión iniciada como {user} en {name}",
   set_not_signed: "Sin sesión iniciada",
   set_backup: "Guardar una copia de seguridad de tu clave…",

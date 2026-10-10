@@ -132,6 +132,7 @@ export interface Settings {
   windowed: boolean;
   language: Language;
   gameLanguage: GameLanguage;
+  showConsole: boolean; // the DLL's log window, normally hidden (DR_SHOW_CONSOLE=1)
 }
 
 export interface Snapshot {

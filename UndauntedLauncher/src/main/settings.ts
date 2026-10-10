@@ -27,6 +27,7 @@ export interface StoredSettings {
   windowed: boolean;
   language: Language;
   gameLanguage: GameLanguage;
+  showConsole: boolean;
   usernames: Record<string, string>; // per server id, for display only
   backupOffered: Record<string, boolean>; // per server id: the one-time backup offer was shown
 }
@@ -42,6 +43,7 @@ export function defaultSettings(language: Language): StoredSettings {
     windowed: false,
     language,
     gameLanguage: "auto",
+    showConsole: false,
     usernames: {},
     backupOffered: {},
   };
@@ -87,6 +89,7 @@ export function sanitizeSettings(raw: unknown, language: Language, platform: Nod
   if (GRAPHICS_PRESETS.includes(raw.graphics as GraphicsPreset)) s.graphics = raw.graphics as GraphicsPreset;
   if (EXPOSURE_MODES.includes(raw.exposure as ExposureMode)) s.exposure = raw.exposure as ExposureMode;
   s.windowed = raw.windowed === true;
+  s.showConsole = raw.showConsole === true;
   if (raw.huntRegion === 'auto' || raw.huntRegion === 'main' || raw.huntRegion === 'aus' || raw.huntRegion === 'ger') s.huntRegion = raw.huntRegion;
   if (LANGUAGES.includes(raw.language as Language)) s.language = raw.language as Language;
   if (GAME_LANGUAGES.includes(raw.gameLanguage as GameLanguage)) s.gameLanguage = raw.gameLanguage as GameLanguage;

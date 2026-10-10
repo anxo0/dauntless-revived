@@ -294,7 +294,7 @@ export class Controller {
       },
       task: this.task,
       game: { running: this.game.running, relayPort: this.relay?.port ?? null },
-      settings: { graphics: this.s.graphics, exposure: this.s.exposure, windowed: this.s.windowed, language: this.s.language, gameLanguage: this.s.gameLanguage, ...(this.s.huntRegion ? {huntRegion:this.s.huntRegion} : {}) },
+      settings: { graphics: this.s.graphics, exposure: this.s.exposure, windowed: this.s.windowed, language: this.s.language, gameLanguage: this.s.gameLanguage, showConsole: this.s.showConsole, ...(this.s.huntRegion ? {huntRegion:this.s.huntRegion} : {}) },
       app: { version: this.p.appVersion, packaged: this.p.packaged, updateReady: this.updateReady },
       status: this.status,
       statusUnsupported: this.statusUnsupported,
@@ -1181,7 +1181,7 @@ export class Controller {
         log.info(`starting ${describeLaunch(EXE_NAME, args)}${via}${sv.mode === "public" ? ` (relay to ${sv.host}:${sv.port})` : ""}`);
         try {
           this.endPlayingSession=()=>endPlaying(ep,key);
-          await this.game.start(win64Dir(dir), args, prepared?.runtime);
+          await this.game.start(win64Dir(dir), args, prepared?.runtime, this.s.showConsole ? { DR_SHOW_CONSOLE: "1" } : undefined);
         } catch (e) {
           this.endPlayingSession=null;
           log.error(`launch failed: ${describeError(e)}`);
@@ -1236,13 +1236,14 @@ export class Controller {
         if (GRAPHICS_PRESETS.includes(p.graphics as GraphicsPreset)) s.graphics = p.graphics as GraphicsPreset;
         if (EXPOSURE_MODES.includes(p.exposure as ExposureMode)) s.exposure = p.exposure as ExposureMode;
         if (typeof p.windowed === "boolean") s.windowed = p.windowed;
+        if (typeof p.showConsole === "boolean") s.showConsole = p.showConsole;
         if (p.huntRegion === 'auto' || p.huntRegion === 'main' || p.huntRegion === 'aus' || p.huntRegion === 'ger') s.huntRegion = p.huntRegion;
         if (LANGUAGES.includes(p.language as Language)) s.language = p.language as Language;
         if (GAME_LANGUAGES.includes(p.gameLanguage as GameLanguage)) s.gameLanguage = p.gameLanguage as GameLanguage;
       });
     }
     this.publish();
-    return { graphics: this.s.graphics, exposure: this.s.exposure, windowed: this.s.windowed, language: this.s.language, gameLanguage: this.s.gameLanguage, ...(this.s.huntRegion ? {huntRegion:this.s.huntRegion} : {}) };
+    return { graphics: this.s.graphics, exposure: this.s.exposure, windowed: this.s.windowed, language: this.s.language, gameLanguage: this.s.gameLanguage, showConsole: this.s.showConsole, ...(this.s.huntRegion ? {huntRegion:this.s.huntRegion} : {}) };
   }
 
   async openExternal(target: ExternalTarget): Promise<ActionResult> {

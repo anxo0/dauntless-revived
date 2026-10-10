@@ -330,6 +330,14 @@ test("exposure setting defaults to the game and rejects unexpected renderer valu
   assert.equal(settingsPatch({ exposure: "manual" }), null);
 });
 
+test("the log window setting defaults to hidden and takes only true or false", () => {
+  assert.equal(sanitizeSettings({}, "en").showConsole, false);
+  assert.equal(sanitizeSettings({ showConsole: true }, "en").showConsole, true);
+  assert.equal(sanitizeSettings({ showConsole: "yes" }, "en").showConsole, false);
+  assert.deepEqual(settingsPatch({ showConsole: true }), { showConsole: true });
+  assert.equal(settingsPatch({ showConsole: "yes" }), null);
+});
+
 test("game language setting defaults to automatic and rejects unexpected renderer values", () => {
   assert.equal(sanitizeSettings({}, "en").gameLanguage, "auto");
   assert.equal(sanitizeSettings({ gameLanguage: "ru-RU" }, "en").gameLanguage, "ru-RU");

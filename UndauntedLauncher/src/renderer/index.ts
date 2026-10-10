@@ -1273,6 +1273,15 @@ function renderSettings(): void {
       snap.server ? settingsRow(t("set_server"), `${serverName()} (${snap.server.host}:${snap.server.port})`, button(t("set_leave"), () => showModal({ kind: "leave" }), { fk: "set-leave", disabled: busy })) : null,
     );
 
+    // The DLL keeps its log window hidden; players who troubleshoot can bring it back.
+    const showConsole = h("button", { type: "button", class: "switch", role: "switch", "aria-checked": snap.settings.showConsole ? "true" : "false", "aria-labelledby": "console-label", "data-fk": "show-console" });
+    showConsole.addEventListener("click", () => void api.setSettings({ showConsole: !snap.settings.showConsole }));
+    const troubleshooting = card(
+      "settings-section",
+      h("h2", { class: "card-title" }, t("set_troubleshooting")),
+      h("div", { class: "settings-row" }, h("div", { class: "settings-row-text" }, h("span", { class: "settings-row-title", id: "console-label" }, t("set_show_console")), h("span", { class: "settings-row-sub" }, t("set_show_console_text"))), showConsole),
+    );
+
     const about = card(
       "settings-section",
       h("h2", { class: "card-title" }, t("set_about")),
@@ -1291,7 +1300,7 @@ function renderSettings(): void {
       snap.app.updateReady ? h("div", { class: "card-row" }, button(t("update_restart"), () => void api.installUpdate(), { cls: "btn-primary", fk: "about-update", disabled: snap.game.running })) : null,
     );
 
-    return [h("div", { class: "page" }, h("h1", { class: "page-title", id: "settings-title" }, t("set_title")), game, graphics, language, account, about)];
+    return [h("div", { class: "page" }, h("h1", { class: "page-title", id: "settings-title" }, t("set_title")), game, graphics, language, account, troubleshooting, about)];
   });
 }
 
