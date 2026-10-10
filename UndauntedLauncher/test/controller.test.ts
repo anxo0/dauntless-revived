@@ -55,7 +55,7 @@ function temp(prefix: string): string {
 before(async () => {
   cert = makeTestCert();
   other = makeTestCert();
-  meta = new FakeMetagame({ name: "Friday Hunts", validCodes: new Set(["ABCD-EFGH-JKLM", "SECOND-CODE", "THIRD-CODE", "FOURTH-CODE", "FIFTH-CODE", "SIXTH-CODE", "EXPOSURE-CODE", "GAMELANG-CODE", "EXISTING-CODE", "PICKED-CODE"]) });
+  meta = new FakeMetagame({ name: "Friday Hunts", validCodes: new Set(["ABCD-EFGH-JKLM", "SECOND-CODE", "THIRD-CODE", "FOURTH-CODE", "FIFTH-CODE", "SIXTH-CODE", "EXPOSURE-CODE", "GAMELANG-CODE", "EXISTING-CODE", "PICKED-CODE", "SAVED-CODE"]) });
   content = new FakeContentServer({ key: "unused", files });
   gateway = https.createServer({ cert: cert.certPem, key: cert.keyPem }, (req, res) => {
     gatewayRequests.push(`${req.method} ${req.url}`);
@@ -257,6 +257,34 @@ test("game language: automatic by default, stored when chosen, an unknown value 
   hx.child()!.emit("exit", 0);
   await new Promise((r) => setTimeout(r, 100));
   await hx.c.shutdown();
+});
+
+test("saved servers: a server joined before comes back with one click, keeping its account, and can be removed from the list", async () => {
+  const hx = harness();
+  try {
+    await hx.c.init();
+    assert.deepEqual(hx.c.snapshot().savedServers, []);
+    assert.deepEqual(await hx.c.submitInvite(invite(cert.fingerprint, "SAVED-CODE")), { ok: true });
+    assert.deepEqual(await hx.c.register("Saved_1"), { ok: true, username: "Saved_1" });
+    const [entry] = hx.c.snapshot().savedServers;
+    assert.deepEqual([entry.name, entry.current, entry.username], ["Friday Hunts", true, "Saved_1"]);
+    assert.deepEqual(await hx.c.removeSavedServer(entry.id), { ok: false, error: { code: "busy" } }, "the current server stays");
+
+    assert.deepEqual(await hx.c.forgetServer(), { ok: true });
+    assert.equal(hx.c.snapshot().server, null);
+    assert.deepEqual(hx.c.snapshot().savedServers.map((sv) => [sv.id, sv.current]), [[entry.id, false]]);
+
+    assert.deepEqual(await hx.c.switchServer("0".repeat(24)), { ok: false, error: { code: "invite_invalid_format" } });
+    assert.deepEqual(await hx.c.switchServer(entry.id), { ok: true });
+    const back = hx.c.snapshot();
+    assert.deepEqual([back.server?.host, back.server?.fingerprint, back.account.hasKey, back.server?.hasPendingInvite], ["127.0.0.1", cert.fingerprint, true, false]);
+
+    assert.deepEqual(await hx.c.forgetServer(), { ok: true });
+    assert.deepEqual(await hx.c.removeSavedServer(entry.id), { ok: true });
+    assert.deepEqual(hx.c.snapshot().savedServers, []);
+  } finally {
+    await hx.c.shutdown();
+  }
 });
 
 test("auto exposure: off by default; Basic is stored and written at the next PLAY, an unknown value changes nothing, Game default removes it", async () => {

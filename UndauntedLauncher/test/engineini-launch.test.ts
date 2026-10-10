@@ -323,6 +323,15 @@ test("Engine.ini: experimental Basic mode remains adaptive and can be reverted",
 });
 
 test("exposure setting defaults to the game and rejects unexpected renderer values", () => {
+  {
+    const a = { mode: "public", host: "203.0.113.10", port: 443, name: "A", share: null, fp: "a".repeat(64), code: null };
+    const b = { mode: "public", host: "203.0.113.20", port: 443, name: "B", share: null, fp: "b".repeat(64), code: null };
+    const bad = { mode: "public", host: "203.0.113.30", port: 443, name: "C", share: null, fp: "nope", code: null };
+    const s = sanitizeSettings({ server: { ...a, name: "A renamed" }, savedServers: [b, a, bad, b] }, "en");
+    assert.deepEqual(s.savedServers.map((sv) => sv.name), ["B", "A renamed"], "deduplicated, invalid dropped, the current entry kept up to date");
+    assert.deepEqual(sanitizeSettings({ server: a }, "en").savedServers.map((sv) => sv.name), ["A"], "older settings: the current server is added");
+    assert.deepEqual(sanitizeSettings({ savedServers: "x" }, "en").savedServers, []);
+  }
   assert.equal(sanitizeSettings({}, "en").exposure, "game");
   assert.equal(sanitizeSettings({ exposure: "basic" }, "en").exposure, "basic");
   assert.equal(sanitizeSettings({ exposure: "manual" }, "en").exposure, "game");

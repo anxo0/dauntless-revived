@@ -155,6 +155,7 @@ function snap(over: Partial<Snapshot>): Snapshot {
   const base: Snapshot = {
     phase: "ready",
     busy: false,
+    savedServers: [],
     server: { mode: "public", host: "203.0.113.10", port: 443, name: "S", hasShare: false, hasPendingInvite: false, loopback: false, fingerprint: "a".repeat(64) },
     connect: { checking: false, problem: null, tailscaleInstalled: false, lastCheckedAt: null },
     account: { username: "U", hasKey: true, offerBackup: false },

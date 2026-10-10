@@ -24,6 +24,8 @@ const api = {
     ipcRenderer.invoke(IPC.submitInvite, String(text), acceptNewCertificate === true),
   retryConnect: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.retryConnect),
   forgetServer: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.forgetServer),
+  switchServer: (id: string): Promise<ActionResult> => ipcRenderer.invoke(IPC.switchServer, String(id)),
+  removeSavedServer: (id: string): Promise<ActionResult> => ipcRenderer.invoke(IPC.removeSavedServer, String(id)),
   register: (username: string): Promise<RegisterOutcome> => ipcRenderer.invoke(IPC.register, String(username)),
   useExistingKey: (text: string): Promise<ActionResult> => ipcRenderer.invoke(IPC.useExistingKey, String(text)),
   importKeyFile: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.importKeyFile),

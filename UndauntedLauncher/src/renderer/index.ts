@@ -39,6 +39,7 @@ const state = {
   existingFormOpen: false,
   news: [] as NewsItem[],
   newsSeen: false,
+  serverMenu: false, // the rail's server switcher is open
   branding: { backgrounds: [], accent: null } as Branding,
   extrasFor: "",
   extrasAt: 0,
@@ -302,10 +303,52 @@ function leaveLink(snap: Snapshot): HTMLButtonElement {
   return linkButton(t("connect_use_other"), () => showModal({ kind: "leave" }), { fk: "leave", disabled: snap.busy || snap.task !== null || snap.game.running });
 }
 
+// Servers joined before: one click to go back to one, no invite to paste. The current one is left out.
+async function switchTo(id: string): Promise<void> {
+  const r = await api.switchServer(id);
+  if (!r.ok && r.error && r.error.code !== "cancelled") {
+    if (!(await api.getSnapshot()).lastError) state.localError = r.error;
+    renderBanners();
+    return;
+  }
+  setView("play");
+}
+
+function savedServerSub(sv: Snapshot["savedServers"][number]): string {
+  return sv.username ? `${t("saved_account", { name: sv.username })} · ${sv.host}:${sv.port}` : `${sv.host}:${sv.port}`;
+}
+
+function savedServersCard(snap: Snapshot): HTMLElement | null {
+  const others = snap.savedServers.filter((sv) => !sv.current);
+  if (others.length === 0) return null;
+  const locked = snap.busy || snap.task !== null || snap.game.running;
+  const rows = others.map((sv) =>
+    h(
+      "div",
+      { class: "settings-row" },
+      h(
+        "div",
+        { class: "settings-row-text" },
+        h("span", { class: "settings-row-title" }, sv.name, " ", modeBadge(sv.mode)),
+        h("span", { class: "settings-row-sub mono" }, savedServerSub(sv)),
+      ),
+      h(
+        "div",
+        { class: "settings-actions" },
+        button(t("saved_join"), () => void switchTo(sv.id), { cls: "btn-primary", fk: `saved-${sv.id}`, disabled: locked }),
+        linkButton(t("saved_remove"), () => void api.removeSavedServer(sv.id), { icon: "close", fk: `saved-rm-${sv.id}`, disabled: locked }),
+      ),
+    ),
+  );
+  return card("", h("h2", { class: "card-title" }, t("saved_title")), h("p", { class: "card-text" }, t("saved_text")), ...rows);
+}
+
 function playJoin(snap: Snapshot): HTMLElement[] {
+  const saved = savedServersCard(snap);
   return [
     h("div", { class: "eyebrow" }, t("join_eyebrow")),
     ...heading(t("join_title"), t("join_text")),
+    ...(saved ? [saved] : []),
     card(
       "",
       h("div", { class: "field" }, h("label", { class: "field-label", for: "invite-input" }, t("join_label")), inviteInput, invitePreview, inviteHint),
@@ -1122,7 +1165,7 @@ function renderServer(): void {
   const container = $("#view-server");
   const snap = state.snap;
   const minute = Math.floor(Date.now() / 30000);
-  const sig = JSON.stringify([state.lang, snap?.server ?? null, snap?.status ?? null, snap?.phase, snap?.connect.problem, snap?.busy, !!snap?.task, snap?.game.running, minute]);
+  const sig = JSON.stringify([state.lang, snap?.server ?? null, snap?.savedServers ?? [], snap?.status ?? null, snap?.phase, snap?.connect.problem, snap?.busy, !!snap?.task, snap?.game.running, minute]);
   renderRegion(container, sig, () => {
     if (!snap?.server) {
       return [h("div", { class: "page" }, h("h1", { class: "page-title", id: "server-title" }, t("nav_server")), card("", h("p", { class: "card-text" }, t("sp_nojoin"))), partnerBanner())];
@@ -1160,6 +1203,8 @@ function renderServer(): void {
         ),
       );
     }
+    const saved = savedServersCard(snap);
+    if (saved) parts.push(saved);
     parts.push(h("div", { class: "card-row" }, leaveLink(snap)));
     return [h("div", { class: "page" }, ...parts)];
   });
@@ -1180,7 +1225,7 @@ function renderSettings(): void {
   const container = $("#view-settings");
   const snap = state.snap;
   if (!snap) return;
-  const sig = JSON.stringify([state.lang, snap.settings, snap.install.dir, snap.account, snap.server, snap.app, snap.phase, snap.busy, !!snap.task]);
+  const sig = JSON.stringify([state.lang, snap.settings, snap.install.dir, snap.account, snap.server, snap.savedServers, snap.app, snap.phase, snap.busy, !!snap.task]);
   renderRegion(container, sig, () => {
     const busy = snap.busy || snap.task !== null || snap.game.running;
 
@@ -1270,8 +1315,27 @@ function renderSettings(): void {
             button(t("set_logout"), () => showModal({ kind: "logout" }), { cls: "btn-danger", fk: "set-logout", disabled: busy }),
           )
         : settingsRow(t("set_not_signed"), null),
-      snap.server ? settingsRow(t("set_server"), `${serverName()} (${snap.server.host}:${snap.server.port})`, button(t("set_leave"), () => showModal({ kind: "leave" }), { fk: "set-leave", disabled: busy })) : null,
+      snap.server ? settingsRow(t("set_server_current"), `${serverName()} (${snap.server.host}:${snap.server.port})`, button(t("set_add_server"), () => showModal({ kind: "leave" }), { fk: "set-leave", disabled: busy })) : null,
     );
+
+    // Other servers joined before: switch to one, or take it off the list (its key stays on this PC).
+    const otherServers = snap.savedServers.some((sv) => !sv.current)
+      ? card(
+          "settings-section",
+          h("h2", { class: "card-title" }, t("saved_other_title")),
+          h("p", { class: "card-text" }, t("saved_other_text")),
+          ...snap.savedServers
+            .filter((sv) => !sv.current)
+            .map((sv) =>
+              settingsRow(
+                sv.name,
+                savedServerSub(sv),
+                button(t("saved_switch_to"), () => void switchTo(sv.id), { cls: "btn-primary", fk: `set-saved-${sv.id}`, disabled: busy }),
+                button(t("saved_remove"), () => void api.removeSavedServer(sv.id), { icon: "close", fk: `set-saved-rm-${sv.id}`, disabled: busy }),
+              ),
+            ),
+        )
+      : null;
 
     const about = card(
       "settings-section",
@@ -1291,7 +1355,7 @@ function renderSettings(): void {
       snap.app.updateReady ? h("div", { class: "card-row" }, button(t("update_restart"), () => void api.installUpdate(), { cls: "btn-primary", fk: "about-update", disabled: snap.game.running })) : null,
     );
 
-    return [h("div", { class: "page" }, h("h1", { class: "page-title", id: "settings-title" }, t("set_title")), game, graphics, language, account, about)];
+    return [h("div", { class: "page" }, h("h1", { class: "page-title", id: "settings-title" }, t("set_title")), game, graphics, language, account, otherServers, about)];
   });
 }
 
@@ -1506,15 +1570,42 @@ function renderRail(): void {
   );
   const chip = $("#account-chip");
   const user = snap?.account.hasKey ? snap.account.username : null;
-  renderRegion(chip, JSON.stringify([state.lang, user, snap?.server?.name ?? null, snap?.status?.name ?? null]), () => [
-    h("span", { class: `avatar${user ? "" : " empty"}`, "aria-hidden": "true" }, user ? Array.from(user)[0].toUpperCase() : "?"),
-    h(
-      "span",
-      { class: "account-text" },
-      h("span", { class: "account-label" }, snap?.server ? serverName() : t("rail_not_joined")),
-      h("span", { class: "account-name" }, user ?? t("rail_not_signed_in")),
-    ),
-  ]);
+  // With other servers saved, the chip is also the server switcher: a click lists them, one more click joins.
+  const others = snap?.savedServers.filter((sv) => !sv.current) ?? [];
+  const locked = !snap || snap.busy || snap.task !== null || snap.game.running;
+  if (others.length === 0 || locked) state.serverMenu = false;
+  renderRegion(chip, JSON.stringify([state.lang, user, snap?.server?.name ?? null, snap?.status?.name ?? null, others, locked, state.serverMenu]), () => {
+    const inner = [
+      h("span", { class: `avatar${user ? "" : " empty"}`, "aria-hidden": "true" }, user ? Array.from(user)[0].toUpperCase() : "?"),
+      h(
+        "span",
+        { class: "account-text" },
+        h("span", { class: "account-label" }, snap?.server ? serverName() : t("rail_not_joined")),
+        h("span", { class: "account-name" }, user ?? t("rail_not_signed_in")),
+      ),
+    ];
+    if (others.length === 0) return inner;
+    const toggle = h("button", { type: "button", class: "account-switch", "data-fk": "server-switch", "aria-haspopup": "menu", "aria-expanded": state.serverMenu ? "true" : "false", title: t("saved_switch"), disabled: locked }, ...inner);
+    toggle.addEventListener("click", () => {
+      state.serverMenu = !state.serverMenu;
+      renderRail();
+    });
+    const menu = h(
+      "ul",
+      { class: "server-menu", role: "menu", "aria-label": t("saved_switch"), hidden: !state.serverMenu },
+      h("li", { class: "server-menu-head", role: "presentation" }, t("saved_switch")),
+      ...others.map((sv) => {
+        const item = h("button", { type: "button", class: "server-menu-item", role: "menuitem", "data-fk": `switch-${sv.id}` }, h("span", { class: "server-menu-name" }, sv.name), h("span", { class: "server-menu-sub" }, savedServerSub(sv)));
+        item.addEventListener("click", () => {
+          state.serverMenu = false;
+          renderRail();
+          void switchTo(sv.id);
+        });
+        return h("li", { role: "none" }, item);
+      }),
+    );
+    return [toggle, menu];
+  });
   for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>("#lang-switch .lang-btn"))) {
     b.setAttribute("aria-pressed", b.dataset.lang === state.lang ? "true" : "false");
   }
@@ -1719,6 +1810,21 @@ function renderModal(): void {
   // Destructive or risky choices never get the default focus.
   (m.kind === "logout" || m.kind === "cert_changed" ? cancel : confirm).focus();
 }
+
+// The server switcher closes on a click anywhere else, and on Escape.
+window.addEventListener("mousedown", (e) => {
+  if (state.serverMenu && !$("#account-chip").contains(e.target as Node)) {
+    state.serverMenu = false;
+    renderRail();
+  }
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && state.serverMenu) {
+    state.serverMenu = false;
+    renderRail();
+    document.querySelector<HTMLButtonElement>(".account-switch")?.focus();
+  }
+});
 
 document.addEventListener("keydown", (e) => {
   if (!state.modal) {
