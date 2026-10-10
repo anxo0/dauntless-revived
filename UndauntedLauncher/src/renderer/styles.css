@@ -319,11 +319,11 @@ img {
 
 .nav-badge {
   margin-left: auto;
-  min-width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--dr-glow);
-  box-shadow: 0 0 8px var(--dr-glow);
+  width: auto;
+  height: 22px;
+  flex: none;
+  filter: drop-shadow(0 1px 3px var(--shadow));
+  pointer-events: none;
 }
 
 .rail-foot {

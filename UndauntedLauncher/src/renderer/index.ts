@@ -4,6 +4,7 @@
 
 import { $, forceRender, githubMark, h, icon, renderRegion, type IconName } from "./dom";
 import partnerLogo from "./brand/eugamehost-partner.png";
+import newsBadge from "./brand/news-badge.svg";
 import { buildScene } from "./scene";
 import { isStringKey, translate, type StringKey } from "../shared/i18n";
 import { localized, PATRONS, PROJECT_PEOPLE, SOFTWARE, UPSTREAM_PEOPLE, type CreditPerson, type CreditRole } from "../shared/credits";
@@ -1498,7 +1499,7 @@ function renderRail(): void {
         { type: "button", class: "nav-item", "aria-current": state.view === n.view ? "page" : undefined, "data-fk": `nav-${n.view}` },
         icon(n.icon),
         t(n.key),
-        n.view === "news" && unread ? h("span", { class: "nav-badge", role: "img", "aria-label": t("news_new") }) : null,
+        n.view === "news" && unread ? h("img", { class: "nav-badge", src: newsBadge, alt: t("news_new"), draggable: "false" }) : null,
       );
       b.addEventListener("click", () => setView(n.view));
       return h("li", {}, b);
