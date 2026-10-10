@@ -1303,7 +1303,7 @@ function renderSettings(): void {
       id: 'hunt-region',
       fk: 'hunt-region',
       value: snap.settings.huntRegion ?? 'auto',
-      options: [{ value: 'auto', label: 'Automatic (closest region)' }, { value: 'main', label: 'EU' }, { value: 'aus', label: 'Australia (OCE)' }, { value: 'ger', label: 'Germany' }],
+      options: [{ value: 'auto', label: t('region_auto') }, { value: 'main', label: t('region_main') }, { value: 'aus', label: t('region_aus') }, { value: 'ger', label: t('region_ger') }],
       onChange: (huntRegion) => void api.setSettings({ huntRegion }),
       disabled: busy,
     });
@@ -1312,8 +1312,8 @@ function renderSettings(): void {
       "settings-section",
       h("h2", { class: "card-title" }, t("set_game")),
       h('div',{class:'settings-row'},h('div',{class:'settings-row-text'},
-        h('label',{class:'settings-row-title',for:'hunt-region'},'World region'),
-        h('span',{class:'settings-row-sub'},'Automatic measures available regions when you press Play. You can choose any region yourself. A party follows its leader’s region; invites work across regions. If OCE is full, matchmaking waits instead of moving you to Main.')),huntRegion),
+        h('label',{class:'settings-row-title',for:'hunt-region'},t('set_region')),
+        h('span',{class:'settings-row-sub'},t('set_region_text'))),huntRegion),
       settingsRow(
         t("set_folder"),
         snap.install.dir,
