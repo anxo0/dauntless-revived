@@ -487,3 +487,51 @@
 :root[data-style="dauntless"] .account-switch::after {
   border-color: #b9c6d2;
 }
+
+/* ------------------------------------------------------------------ players and worlds */
+
+/* Each active world: a small steel-framed panel like the rail's boxes. */
+:root[data-style="dauntless"] .instance {
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, #0c2b48, #071a2c) padding-box,
+    linear-gradient(180deg, var(--dl-silver-hi), var(--dl-silver-mid) 30%, var(--dl-silver-lo) 70%, var(--dl-silver-mid)) border-box;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.45);
+}
+
+:root[data-style="dauntless"] .instance-title {
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* The world's icon and the players' initials on a small bevelled steel-blue plate. */
+:root[data-style="dauntless"] .instance-icon,
+:root[data-style="dauntless"] .player-avatar {
+  border-radius: 3px;
+  border: 1px solid var(--dl-bar-edge);
+  background: linear-gradient(180deg, var(--dl-bar-top), var(--dl-bar-bottom));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), inset 0 -2px 4px rgb(0 0 0 / 0.35);
+}
+
+/* Fill bars like the game's: a dark recessed track with a steel rim and a glossy fill. */
+:root[data-style="dauntless"] .instance-bar {
+  height: 6px;
+  border-radius: 1px;
+  background: #03101c;
+  box-shadow: 0 0 0 1px var(--dl-silver-lo), inset 0 1px 2px rgb(0 0 0 / 0.8);
+}
+
+:root[data-style="dauntless"] .instance-bar > span {
+  border-radius: 0;
+  background: linear-gradient(180deg, #8fd0ec, #3f9ccc 50%, #2a7aa8);
+}
+
+:root[data-style="dauntless"] .k-hunt .instance-bar > span {
+  background: linear-gradient(180deg, #a6eef7, var(--dl-cyan) 50%, #3fa9b8);
+}
+
+:root[data-style="dauntless"] .player:hover {
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgb(29 79 120 / 0.55), rgb(17 51 79 / 0.55));
+}
