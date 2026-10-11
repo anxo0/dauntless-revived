@@ -433,6 +433,28 @@ img {
   gap: 14px;
 }
 
+.settings-locked {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--dr-ice);
+  border-left-width: 4px;
+  background: color-mix(in srgb, var(--dr-deep) 60%, transparent);
+  color: var(--dr-frost);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-locked .icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 1px;
+  color: var(--dr-ice);
+}
+
 .settings-row-head {
   display: flex;
   align-items: center;

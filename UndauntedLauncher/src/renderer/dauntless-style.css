@@ -800,3 +800,16 @@
 :root[data-style="dauntless"] .rail {
   overflow-x: hidden;
 }
+
+/* The "settings are locked" notice: a dark plate with a gold warning edge, like the game's alerts. */
+:root[data-style="dauntless"] .settings-locked {
+  border-radius: 2px;
+  border: 1px solid rgb(220 170 60 / 0.55);
+  border-left: 4px solid var(--dl-gold);
+  background: rgb(30 22 6 / 0.55);
+  color: #f3e7c8;
+}
+
+:root[data-style="dauntless"] .settings-locked .icon {
+  color: var(--dl-gold);
+}

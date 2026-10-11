@@ -1573,7 +1573,11 @@ function renderSettings(): void {
       });
       tabs.appendChild(b);
     }
-    const panel = h("div", { class: "settings-panel", id: "settings-panel", role: "tabpanel", "aria-labelledby": `set-tab-${state.settingsTab}` }, ...panels[state.settingsTab]);
+    // Locked settings say why: a click on a greyed-out control otherwise does nothing. The game
+    // process takes a few seconds to really end after its window closes, which is the usual case.
+    const lockReason = snap.game.running ? t("set_locked_game") : snap.task !== null || snap.busy ? t("set_locked_task") : null;
+    const lockNotice = lockReason ? h("div", { class: "settings-locked", role: "status" }, icon("warning"), h("span", {}, lockReason)) : null;
+    const panel = h("div", { class: "settings-panel", id: "settings-panel", role: "tabpanel", "aria-labelledby": `set-tab-${state.settingsTab}` }, lockNotice, ...panels[state.settingsTab]);
     // The tabs in a row on top, then one panel with every setting in its own row box.
     return [h("div", { class: "page page-wide" }, h("h1", { class: "page-title", id: "settings-title" }, t("set_title")), h("div", { class: "settings-layout" }, tabs, panel))];
   });
