@@ -2342,7 +2342,9 @@ function playOffline(): HTMLElement[] {
       return [
         top,
         ...heading(t("off_running_title"), t("off_running_text")),
-        card("", h("p", { class: "card-text" }, t("off_running_note")), h("div", { class: "card-row" }, button(t("off_stop"), () => void api.stopOffline().then(onOfflineStatus), { cls: "btn-danger", fk: "offline-stop" }))),
+        // The runtime owns the local servers while the game runs and stops them itself when the game
+        // exits, so there is nothing to press here.
+        card("", h("p", { class: "card-text" }, t("off_running_close")), h("p", { class: "small-print" }, t("off_running_note"))),
       ];
     case "stopping":
       return [top, ...heading(t("off_stopping_title"), null), card("", h("div", { class: "card-row" }, h("div", { class: "spinner", role: "presentation" }), t("off_stopping_wait")))];
@@ -2372,7 +2374,8 @@ function playOffline(): HTMLElement[] {
       return [
         top,
         ...heading(t("off_starting_title"), t("off_starting_text")),
-        card("", steps, s.progress !== undefined ? bar : null, h("div", { class: "card-row" }, linkButton(t("off_cancel"), () => void api.stopOffline().then(onOfflineStatus), { fk: "offline-cancel" }))),
+        // Cancel only before the game starts: once it is launching, the runtime keeps the stack.
+        card("", steps, s.progress !== undefined ? bar : null, s.phase !== "launching-game" ? h("div", { class: "card-row" }, linkButton(t("off_cancel"), () => void api.stopOffline().then(onOfflineStatus), { fk: "offline-cancel" })) : null),
       ];
     }
   }

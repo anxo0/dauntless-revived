@@ -55,8 +55,11 @@ export class OfflineMock implements OfflineRuntime {
     return this.set({ phase: "preparing" });
   }
 
+  // Never closes a running game: while it launches or runs, the stack stays and this is refused
+  // ("busy"); when the game exits the runtime cleans up by itself (running, stopping, stopped).
   async stop(): Promise<OfflineStatus> {
     if (this.current.phase === "stopped") return this.current;
+    if (this.current.phase === "launching-game" || this.current.phase === "running") return { ...this.current, error: { code: "busy" } };
     this.clear();
     this.timers.push(setTimeout(() => this.set({ phase: "stopped" }), 900));
     return this.set({ phase: "stopping" });
