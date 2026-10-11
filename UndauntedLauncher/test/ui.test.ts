@@ -20,6 +20,7 @@ const ROOT = path.resolve(__dirname, "..", "..");
 // Records over the union types: the compiler fails this file if a new code is added without text.
 const ERROR_CODES: Record<ErrorCode, true> = {
   account_banned: true,
+  offline_save_invalid: true,
   invite_invalid_format: true,
   invite_invalid: true,
   username_invalid: true,

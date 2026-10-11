@@ -69,6 +69,8 @@ const api = {
   startOffline: (username?: string): Promise<OfflineStatus> => ipcRenderer.invoke(IPC.offlineStart, username === undefined ? null : String(username)),
   stopOffline: (): Promise<OfflineStatus> => ipcRenderer.invoke(IPC.offlineStop),
   offlineStatus: (): Promise<OfflineStatus> => ipcRenderer.invoke(IPC.offlineStatus),
+  exportOfflineSave: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.offlineExportSave),
+  importOfflineSave: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.offlineImportSave),
   onOfflineStatus: (fn: (s: OfflineStatus) => void): void => {
     ipcRenderer.on(IPC.offlineStatusChanged, (_e, s: OfflineStatus) => fn(s));
   },

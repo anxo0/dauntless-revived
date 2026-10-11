@@ -7,7 +7,8 @@
 // and reviewed before the real runtime exists; the real implementation replaces OfflineMock and
 // keeps the OfflineRuntime interface.
 
-import type { OfflineStatus } from "../shared/types";
+import { promises as fsp } from "node:fs";
+import type { ActionResult, OfflineStatus } from "../shared/types";
 import { isValidUsername } from "../shared/username";
 
 export interface OfflineRuntime {
@@ -15,7 +16,13 @@ export interface OfflineRuntime {
   stop(): Promise<OfflineStatus>;
   status(): OfflineStatus;
   onChange(fn: (s: OfflineStatus) => void): void;
+  // A portable backup of the offline player data (it must restore on another PC or Windows user,
+  // so the local identity is carried or reissued by the runtime). Both are refused while active.
+  exportSave(file: string): Promise<ActionResult>;
+  importSave(file: string): Promise<ActionResult>;
 }
+
+const MOCK_SAVE_FORMAT = "dauntless-revived-offline-save";
 
 export class OfflineMock implements OfflineRuntime {
   private current: OfflineStatus = { phase: "stopped" };
@@ -63,6 +70,30 @@ export class OfflineMock implements OfflineRuntime {
     this.clear();
     this.timers.push(setTimeout(() => this.set({ phase: "stopped" }), 900));
     return this.set({ phase: "stopping" });
+  }
+
+  private active(): boolean {
+    return this.current.phase !== "stopped" && this.current.phase !== "error";
+  }
+
+  async exportSave(file: string): Promise<ActionResult> {
+    if (this.active()) return { ok: false, error: { code: "busy" } };
+    await fsp.writeFile(file, JSON.stringify({ format: MOCK_SAVE_FORMAT, version: 1, mock: true, username: this.account }, null, 2));
+    return { ok: true };
+  }
+
+  async importSave(file: string): Promise<ActionResult> {
+    if (this.active()) return { ok: false, error: { code: "busy" } };
+    let data: unknown;
+    try {
+      data = JSON.parse(await fsp.readFile(file, "utf8"));
+    } catch {
+      return { ok: false, error: { code: "offline_save_invalid" } };
+    }
+    const save = data as { format?: unknown; username?: unknown };
+    if (save?.format !== MOCK_SAVE_FORMAT) return { ok: false, error: { code: "offline_save_invalid" } };
+    this.account = typeof save.username === "string" && isValidUsername(save.username) ? save.username : null;
+    return { ok: true };
   }
 
   private clear(): void {

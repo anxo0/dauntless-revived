@@ -75,6 +75,7 @@ export type ErrorCode =
   | "compat_runtime_missing"
   | "config_failed"
   | "busy"
+  | "offline_save_invalid" // the file picked to restore is not an offline save
   | "cancelled"
   | "cert_mismatch"
   | "cert_changed" // a public invite whose certificate differs from the one this PC's key belongs to
@@ -285,6 +286,8 @@ export const IPC = {
   offlineStart: "dr:offline-start",
   offlineStop: "dr:offline-stop",
   offlineStatus: "dr:offline-status",
+  offlineExportSave: "dr:offline-export-save",
+  offlineImportSave: "dr:offline-import-save",
   // events
   inviteLink: "dr:invite-link",
   offlineStatusChanged: "dr:offline-status-changed",

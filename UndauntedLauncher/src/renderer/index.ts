@@ -23,7 +23,8 @@ type Modal =
   | { kind: "cert_changed"; link: string; name: string; host: string; oldFp: string | null; newFp: string }
   | { kind: "logout" }
   | { kind: "leave" }
-  | { kind: "remove_server"; id: string; name: string };
+  | { kind: "remove_server"; id: string; name: string }
+  | { kind: "offline_restore" };
 
 const api = window.launcher;
 const ART_URL = /^dr-art:\/\/bg\/[0-9a-f]{64}$/;
@@ -43,6 +44,7 @@ const state = {
   offlineView: false, // the Play page shows offline play instead of the online server
   offlineName: "", // the first-run offline username being typed
   playMenu: false, // the PLAY button's dropdown is open
+  offlineSaveNote: null as string | null, // the last backup or restore that worked, shown under the row
   existingFormOpen: false,
   news: [] as NewsItem[],
   newsSeen: false,
@@ -1427,7 +1429,7 @@ function renderSettings(): void {
   const container = $("#view-settings");
   const snap = state.snap;
   if (!snap) return;
-  const sig = JSON.stringify([state.lang, state.settingsTab, snap.settings, snap.install.dir, snap.account, snap.server, snap.savedServers, snap.app, snap.phase, snap.busy, !!snap.task]);
+  const sig = JSON.stringify([state.lang, state.settingsTab, state.offline.phase, state.offlineSaveNote, snap.settings, snap.install.dir, snap.account, snap.server, snap.savedServers, snap.app, snap.phase, snap.busy, !!snap.task]);
   renderRegion(container, sig, () => {
     const busy = snap.busy || snap.task !== null || snap.game.running;
 
@@ -1521,6 +1523,20 @@ function renderSettings(): void {
     // The DLL keeps its log window hidden; players who troubleshoot can bring it back.
     const showConsole = h("button", { type: "button", class: "switch", role: "switch", "aria-checked": snap.settings.showConsole ? "true" : "false", "aria-labelledby": "console-label", "data-fk": "show-console" });
     onToggle(showConsole, (on) => void api.setSettings({ showConsole: on }));
+    // Offline play's save: a portable backup to a file, and a restore (asked first: it replaces the
+    // offline save on this PC). Not while offline play runs.
+    const saveLocked = offlineActive() || snap.game.running;
+    const offlineCard = card(
+      "settings-section",
+      h("h2", { class: "card-title" }, t("off_save_card")),
+      settingsRow(
+        t("off_save_title"),
+        state.offlineSaveNote ?? (saveLocked ? t("off_save_locked") : t("off_save_text")),
+        button(t("off_save_backup"), () => void backupOfflineSave(), { icon: "folder", fk: "offline-backup", disabled: saveLocked }),
+        button(t("off_save_restore"), () => showModal({ kind: "offline_restore" }), { icon: "refresh", fk: "offline-restore", disabled: saveLocked }),
+      ),
+    );
+
     const troubleshooting = card(
       "settings-section",
       h("h2", { class: "card-title" }, t("set_troubleshooting")),
@@ -1575,7 +1591,7 @@ function renderSettings(): void {
       game: [game],
       graphics: [graphics],
       account: [account, otherServers],
-      launcher: [language, troubleshooting, streaming, about],
+      launcher: [language, offlineCard, troubleshooting, streaming, about],
     };
     const tabs = h("div", { class: "settings-tabs", role: "tablist", "aria-label": t("set_title") });
     for (const tab of SETTINGS_TABS) {
@@ -2028,6 +2044,19 @@ function renderModal(): void {
         return null;
       };
       break;
+    case "offline_restore":
+      title = t("off_restore_title");
+      text = [h("p", { class: "modal-text" }, t("off_restore_text"))];
+      confirmLabel = t("off_restore_confirm");
+      onConfirm = async () => {
+        const r = await api.importOfflineSave();
+        if (r.ok) {
+          state.offlineSaveNote = t("off_restore_done");
+          renderSettings();
+        } else await report(r);
+        return null;
+      };
+      break;
     case "remove_server":
       title = t("remove_server_title", { name: m.name });
       text = [h("p", { class: "modal-text" }, t("remove_server_text", { name: m.name }))];
@@ -2284,6 +2313,17 @@ function updateOfflineNameFeedback(): void {
   else offlineNameHint.replaceChildren(tk(`reg_check_${check}`));
   const btn = document.querySelector<HTMLButtonElement>('[data-fk="offline-continue"]');
   if (btn) btn.disabled = check !== "ok";
+}
+
+async function backupOfflineSave(): Promise<void> {
+  const r = await api.exportOfflineSave();
+  if (r.ok) {
+    state.offlineSaveNote = t("off_backup_done");
+    renderSettings();
+  } else if (r.error.code !== "cancelled") {
+    state.localError = r.error;
+    renderBanners();
+  }
 }
 
 function offlineActive(): boolean {
