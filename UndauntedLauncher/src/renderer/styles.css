@@ -1964,39 +1964,64 @@ img {
 
 /* The big button is the primary button, larger: ink on ice to glow (7.31:1 at worst), ink on glow
    when hovered, frost on azure when pressed. */
-/* PLAY with a small arrow beside it: a menu with "Play offline" (or back to online play). */
+/* PLAY with a small arrow built into its right end, past a divider: a menu with "Play offline"
+   (or back to online play). The label moves left to make room for it. */
 .play-split {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
+}
+
+.play-split .big-button {
+  padding-right: 74px;
 }
 
 .play-more {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  right: 12px;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 64px;
+  width: 38px;
   padding: 0;
-  border-radius: 12px;
-  border: 1px solid var(--edge);
-  background: var(--dr-deep);
-  color: var(--dr-frost);
+  border: 0;
+  border-left: 2px solid color-mix(in srgb, var(--dr-ink) 30%, transparent);
+  border-radius: 0;
+  background: transparent;
+  color: var(--dr-ink);
   cursor: pointer;
+  transition: transform 0.12s;
 }
 
-.play-more:hover:not(:disabled) {
-  border-color: var(--dr-glow);
+/* Hover: only the arrow reacts (a nudge down), no box around it. */
+.play-more:hover:not(:disabled) .icon {
+  transform: translateY(2px);
+}
+
+.play-more .icon {
+  transition: transform 0.12s;
+}
+
+/* No focus box over the gold plate: the keyboard focus shows as a light glow on the arrow. */
+.play-more:focus,
+.play-more:focus-visible {
+  outline: none;
+}
+
+.play-more:focus-visible .icon {
+  filter: drop-shadow(0 0 3px var(--dr-frost)) drop-shadow(0 0 2px var(--dr-frost));
 }
 
 .play-more:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
 }
 
 .play-more .icon {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.6;
 }
 
 .play-menu {
