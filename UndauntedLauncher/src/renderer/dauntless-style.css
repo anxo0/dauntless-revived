@@ -820,6 +820,22 @@
   filter: drop-shadow(0 1px 0 rgb(255 240 200 / 0.65));
 }
 
+/* On the blue (running, paused) and grey (disabled) plates the arrow and divider turn light, like
+   the label on those plates. */
+:root[data-style="dauntless"] .big-button.is-running ~ .play-more,
+:root[data-style="dauntless"] .big-button.is-pause ~ .play-more,
+:root[data-style="dauntless"] .big-button:disabled ~ .play-more {
+  color: #e3edf6;
+  border-left-color: rgb(10 25 40 / 0.55);
+  box-shadow: inset 1px 0 0 rgb(255 255 255 / 0.3);
+}
+
+:root[data-style="dauntless"] .big-button.is-running ~ .play-more .icon,
+:root[data-style="dauntless"] .big-button.is-pause ~ .play-more .icon,
+:root[data-style="dauntless"] .big-button:disabled ~ .play-more .icon {
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.6));
+}
+
 :root[data-style="dauntless"] .play-more:focus-visible .icon {
   filter: drop-shadow(0 0 3px #fff6d0) drop-shadow(0 1px 0 rgb(255 240 200 / 0.65));
 }
