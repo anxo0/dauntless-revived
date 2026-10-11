@@ -25,6 +25,8 @@ import { describeError, log, logToFile } from "./main/log";
 import { boundedString, externalTarget, isTrustedPageUrl, relayPortOverride, settingsPatch } from "./main/ipc-validate";
 import { INVITE_SCHEME, parseInvite } from "./shared/invite";
 import { IPC, type Snapshot, type TaskProgress } from "./shared/types";
+import { OfflineMock, type OfflineRuntime } from "./main/offline";
+import { isValidUsername } from "./shared/username";
 import { systemLanguage, translate } from "./shared/i18n";
 import { APP_ID, SQUIRREL_NAME, UPDATE_FEED_URL } from "./main/constants";
 
@@ -285,7 +287,19 @@ function handle(channel: string, fn: (event: IpcMainInvokeEvent, ...args: unknow
   });
 }
 
+// Offline play. OfflineMock stands in until the real local runtime lands (Discussion #57).
+const offline: OfflineRuntime = new OfflineMock();
+offline.onChange((s) => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(IPC.offlineStatusChanged, s);
+});
+
 function registerIpc(c: Controller): void {
+  handle(IPC.offlineStatus, () => offline.status());
+  handle(IPC.offlineStop, () => offline.stop());
+  handle(IPC.offlineStart, (_e, username) => {
+    if (username === undefined || username === null) return offline.start();
+    return isValidUsername(username) ? offline.start(username) : { phase: "needs-username", error: { code: "username_invalid" } };
+  });
   handle(IPC.getSnapshot, () => c.snapshot());
   handle(IPC.checkInvite, (_e, text) => {
     const s = boundedString(text, 2048);

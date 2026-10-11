@@ -92,6 +92,24 @@ export interface LauncherError {
   detail?: string;
 }
 
+// Offline play (Discussion #57): the local runtime's state, as agreed with its author.
+export type OfflinePhase =
+  | "preparing"
+  | "starting-metagame"
+  | "starting-deploy"
+  | "needs-username" // first offline start only: no local account yet
+  | "launching-game"
+  | "running"
+  | "stopping"
+  | "stopped"
+  | "error";
+
+export interface OfflineStatus {
+  phase: OfflinePhase;
+  progress?: number; // 0..1 when meaningful
+  error?: LauncherError;
+}
+
 export type ActionResult = { ok: true } | { ok: false; error: LauncherError };
 
 // Asked before joining from an invite. certificateChanged: this PC has a key for the invite's
@@ -264,8 +282,12 @@ export const IPC = {
   takeInviteLink: "dr:take-invite-link",
   dismissNotice: "dr:dismiss-notice",
   dismissError: "dr:dismiss-error",
+  offlineStart: "dr:offline-start",
+  offlineStop: "dr:offline-stop",
+  offlineStatus: "dr:offline-status",
   // events
   inviteLink: "dr:invite-link",
+  offlineStatusChanged: "dr:offline-status-changed",
   snapshot: "dr:snapshot",
   progress: "dr:progress",
   windowState: "dr:window-state",

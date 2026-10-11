@@ -800,3 +800,58 @@
 :root[data-style="dauntless"] .rail {
   overflow-x: hidden;
 }
+
+/* ------------------------------------------------------------------ offline play */
+
+/* PLAY's arrow: a narrow steel plate beside the gold one, the menu in a steel frame. */
+:root[data-style="dauntless"] .play-more {
+  border-radius: 3px;
+  border: 1px solid var(--dl-silver-mid);
+  background: linear-gradient(180deg, var(--dl-bar-top), var(--dl-bar-bottom));
+  color: var(--dl-gold-hi);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), inset 0 -3px 6px rgb(0 0 0 / 0.35);
+}
+
+:root[data-style="dauntless"] .play-more:hover:not(:disabled) {
+  border-color: var(--dl-sel-edge);
+  background: linear-gradient(180deg, var(--dl-sel-top), var(--dl-sel-bottom));
+}
+
+:root[data-style="dauntless"] .play-menu {
+  padding: 4px;
+  border-radius: 3px;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#061a2d, #061a2d) padding-box,
+    linear-gradient(180deg, var(--dl-silver-hi), var(--dl-silver-mid) 30%, var(--dl-silver-lo) 70%, var(--dl-silver-mid)) border-box;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.6);
+}
+
+:root[data-style="dauntless"] .play-menu-item {
+  border-radius: 2px;
+  border: 1px solid transparent;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+:root[data-style="dauntless"] .play-menu-item:hover,
+:root[data-style="dauntless"] .play-menu-item:focus-visible {
+  border-color: var(--dl-sel-edge);
+  background: linear-gradient(180deg, var(--dl-sel-top), var(--dl-sel-bottom));
+}
+
+/* The progress bar like the game's: a recessed track with a steel rim and a glossy fill. */
+:root[data-style="dauntless"] .offline-bar {
+  height: 8px;
+  border-radius: 1px;
+  background: #03101c;
+  box-shadow: 0 0 0 1px var(--dl-silver-lo), inset 0 1px 2px rgb(0 0 0 / 0.8);
+}
+
+:root[data-style="dauntless"] .offline-bar > span {
+  background: linear-gradient(180deg, #a6eef7, var(--dl-cyan) 50%, #3fa9b8);
+}
+
+:root[data-style="dauntless"] .offline-step.is-done .icon {
+  color: var(--dl-cyan);
+}

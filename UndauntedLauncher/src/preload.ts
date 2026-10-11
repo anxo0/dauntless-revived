@@ -12,6 +12,7 @@ import type {
   NewsItem,
   RegisterOutcome,
   Settings,
+  OfflineStatus,
   Snapshot,
   TaskProgress,
 } from "./shared/types";
@@ -65,6 +66,12 @@ const api = {
   toggleMaximize: (): Promise<boolean> => ipcRenderer.invoke(IPC.windowMaximize),
   close: (): Promise<void> => ipcRenderer.invoke(IPC.windowClose),
   takeInviteLink: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeInviteLink),
+  startOffline: (username?: string): Promise<OfflineStatus> => ipcRenderer.invoke(IPC.offlineStart, username === undefined ? null : String(username)),
+  stopOffline: (): Promise<OfflineStatus> => ipcRenderer.invoke(IPC.offlineStop),
+  offlineStatus: (): Promise<OfflineStatus> => ipcRenderer.invoke(IPC.offlineStatus),
+  onOfflineStatus: (fn: (s: OfflineStatus) => void): void => {
+    ipcRenderer.on(IPC.offlineStatusChanged, (_e, s: OfflineStatus) => fn(s));
+  },
   onSnapshot: (fn: (s: Snapshot) => void): void => {
     ipcRenderer.on(IPC.snapshot, (_e, s: Snapshot) => fn(s));
   },
