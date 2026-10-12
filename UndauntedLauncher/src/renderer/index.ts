@@ -13,7 +13,7 @@ import { checkUsername, extractAccountKey } from "../shared/username";
 import { exposureKey, graphicsKey, primaryButton, shortFile, stepIndex, taskView, updateReason, whereKey } from "../shared/ui-model";
 import { formatBytes, formatDate, formatDuration, formatRunningTime } from "../shared/format";
 import { sortInstances, type InstanceKind, type ServerStatus, type StatusInstance } from "../shared/status";
-import { EXPOSURE_MODES, GAME_LANGUAGES, GRAPHICS_PRESETS, LANGUAGES, type Branding, type ExposureMode, type ExternalTarget, type GameLanguage, type GraphicsPreset, type Language, type LauncherError, type NewsItem, type Snapshot, type TaskProgress } from "../shared/types";
+import { EXPOSURE_MODES, GAME_LANGUAGES, GRAPHICS_PRESETS, LANGUAGES, type Branding, type ExposureMode, type ExternalTarget, type GameLanguage, type GraphicsPreset, type Language, type LauncherError, type NewsItem, type OfflinePhase, type OfflineStatus, type Snapshot, type TaskProgress } from "../shared/types";
 
 type View = "play" | "news" | "server" | "settings" | "partners" | "mods" | "credits";
 const VIEWS: readonly View[] = ["play", "news", "server", "settings", "partners", "mods", "credits"];
@@ -23,7 +23,8 @@ type Modal =
   | { kind: "cert_changed"; link: string; name: string; host: string; oldFp: string | null; newFp: string }
   | { kind: "logout" }
   | { kind: "leave" }
-  | { kind: "remove_server"; id: string; name: string };
+  | { kind: "remove_server"; id: string; name: string }
+  | { kind: "offline_restore" };
 
 const api = window.launcher;
 const ART_URL = /^dr-art:\/\/bg\/[0-9a-f]{64}$/;
@@ -39,6 +40,11 @@ const state = {
   revealed: new Set<string>(), // streamer mode: the values shown with the eye, until the launcher closes
   username: "",
   keyFormOpen: false,
+  offline: { phase: "stopped" } as OfflineStatus, // the local runtime's last status
+  offlineView: false, // the Play page shows offline play instead of the online server
+  offlineName: "", // the first-run offline username being typed
+  playMenu: false, // the PLAY button's dropdown is open
+  offlineSaveNote: null as string | null, // the last backup or restore that worked, shown under the row
   existingFormOpen: false,
   news: [] as NewsItem[],
   newsSeen: false,
@@ -721,11 +727,14 @@ function renderPlay(): void {
     snap.lastError?.code === "key_rejected",
     state.keyFormOpen,
     state.existingFormOpen,
+    state.offlineView,
+    state.offline,
     state.news[0]?.title ?? null,
     snap.phase === "installing" ? state.task?.kind ?? snap.task?.kind : null,
   ]);
   renderRegion(container, sig, () => {
     let parts: HTMLElement[];
+    if (state.offlineView) return [h("div", { class: "play-content" }, ...playOffline())];
     switch (snap.phase) {
       case "loading":
         parts = [h("div", { class: "card-row" }, h("div", { class: "spinner" }), t("loading"))];
@@ -849,6 +858,18 @@ function renderActionBar(): void {
     primary.textContent = t("btn_wait");
     return;
   }
+  renderPlayMenu();
+  if (state.offlineView) {
+    const active = offlineActive();
+    primary.textContent = t(active ? "off_btn" : "off_btn_play");
+    primary.disabled = active || snap.game.running || snap.task !== null;
+    primary.classList.toggle("is-running", active);
+    primary.classList.remove("is-pause");
+    primary.classList.toggle("is-ready", !active && !reducedMotion.matches);
+    primary.setAttribute("data-action", active ? "none" : "offline");
+    renderRegion(info, JSON.stringify([state.lang, "offline", state.offline.phase]), () => [h("div", { class: "action-hint" }, t(active ? "off_hint_active" : "off_hint_idle"))]);
+    return;
+  }
   const b = primaryButton(snap, formState());
   primary.textContent = t(b.labelKey);
   primary.disabled = b.disabled;
@@ -880,6 +901,10 @@ function announce(text: string): void {
 async function onPrimary(): Promise<void> {
   const snap = state.snap;
   if (!snap) return;
+  if (state.offlineView) {
+    if (!offlineActive()) await startOffline();
+    return;
+  }
   const b = primaryButton(snap, formState());
   if (b.disabled || b.action === "none") return;
   state.localError = null;
@@ -1404,7 +1429,7 @@ function renderSettings(): void {
   const container = $("#view-settings");
   const snap = state.snap;
   if (!snap) return;
-  const sig = JSON.stringify([state.lang, state.settingsTab, snap.settings, snap.install.dir, snap.account, snap.server, snap.savedServers, snap.app, snap.phase, snap.busy, !!snap.task]);
+  const sig = JSON.stringify([state.lang, state.settingsTab, state.offline.phase, state.offlineSaveNote, snap.settings, snap.install.dir, snap.account, snap.server, snap.savedServers, snap.app, snap.phase, snap.busy, !!snap.task]);
   renderRegion(container, sig, () => {
     const busy = snap.busy || snap.task !== null || snap.game.running;
 
@@ -1498,6 +1523,20 @@ function renderSettings(): void {
     // The DLL keeps its log window hidden; players who troubleshoot can bring it back.
     const showConsole = h("button", { type: "button", class: "switch", role: "switch", "aria-checked": snap.settings.showConsole ? "true" : "false", "aria-labelledby": "console-label", "data-fk": "show-console" });
     onToggle(showConsole, (on) => void api.setSettings({ showConsole: on }));
+    // Offline play's save: a portable backup to a file, and a restore (asked first: it replaces the
+    // offline save on this PC). Not while offline play runs.
+    const saveLocked = offlineActive() || snap.game.running;
+    const offlineCard = card(
+      "settings-section",
+      h("h2", { class: "card-title" }, t("off_save_card")),
+      settingsRow(
+        t("off_save_title"),
+        state.offlineSaveNote ?? (saveLocked ? t("off_save_locked") : t("off_save_text")),
+        button(t("off_save_backup"), () => void backupOfflineSave(), { icon: "folder", fk: "offline-backup", disabled: saveLocked }),
+        button(t("off_save_restore"), () => showModal({ kind: "offline_restore" }), { icon: "refresh", fk: "offline-restore", disabled: saveLocked }),
+      ),
+    );
+
     const troubleshooting = card(
       "settings-section",
       h("h2", { class: "card-title" }, t("set_troubleshooting")),
@@ -1552,7 +1591,7 @@ function renderSettings(): void {
       game: [game],
       graphics: [graphics],
       account: [account, otherServers],
-      launcher: [language, troubleshooting, streaming, about],
+      launcher: [language, offlineCard, troubleshooting, streaming, about],
     };
     const tabs = h("div", { class: "settings-tabs", role: "tablist", "aria-label": t("set_title") });
     for (const tab of SETTINGS_TABS) {
@@ -2005,6 +2044,19 @@ function renderModal(): void {
         return null;
       };
       break;
+    case "offline_restore":
+      title = t("off_restore_title");
+      text = [h("p", { class: "modal-text" }, t("off_restore_text"))];
+      confirmLabel = t("off_restore_confirm");
+      onConfirm = async () => {
+        const r = await api.importOfflineSave();
+        if (r.ok) {
+          state.offlineSaveNote = t("off_restore_done");
+          renderSettings();
+        } else await report(r);
+        return null;
+      };
+      break;
     case "remove_server":
       title = t("remove_server_title", { name: m.name });
       text = [h("p", { class: "modal-text" }, t("remove_server_text", { name: m.name }))];
@@ -2232,6 +2284,190 @@ function initChrome(): void {
   }, 30000);
 }
 
+// ------------------------------------------------------------------ offline play
+
+// Offline play (Discussion #57): PLAY gets a small arrow with "Play offline". The local runtime
+// starts a server on this PC and the Play page follows its phases: starting, a one-time username,
+// running, stopping, stopped or an error.
+const OFFLINE_STEPS: { phase: OfflinePhase; key: string }[] = [
+  { phase: "preparing", key: "off_step_preparing" },
+  { phase: "starting-metagame", key: "off_step_metagame" },
+  { phase: "starting-deploy", key: "off_step_deploy" },
+  { phase: "launching-game", key: "off_step_game" },
+];
+
+const offlineNameInput = h("input", { class: "input input-big", id: "offline-name", maxlength: "16", autocomplete: "off", spellcheck: "false", "data-fk": "offline-name", "aria-describedby": "offline-name-hint" }) as HTMLInputElement;
+const offlineNameHint = h("div", { class: "hint", id: "offline-name-hint", "aria-live": "polite" });
+offlineNameInput.addEventListener("input", () => {
+  state.offlineName = offlineNameInput.value;
+  updateOfflineNameFeedback();
+});
+offlineNameInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") void submitOfflineName();
+});
+
+function updateOfflineNameFeedback(): void {
+  const check = checkUsername(state.offlineName.trim());
+  offlineNameHint.className = check === "ok" ? "hint hint-ok" : state.offlineName.length === 0 ? "hint" : "hint hint-bad";
+  if (check === "ok") offlineNameHint.replaceChildren(icon("check"), t("reg_check_ok"));
+  else offlineNameHint.replaceChildren(tk(`reg_check_${check}`));
+  const btn = document.querySelector<HTMLButtonElement>('[data-fk="offline-continue"]');
+  if (btn) btn.disabled = check !== "ok";
+}
+
+async function backupOfflineSave(): Promise<void> {
+  const r = await api.exportOfflineSave();
+  if (r.ok) {
+    state.offlineSaveNote = t("off_backup_done");
+    renderSettings();
+  } else if (r.error.code !== "cancelled") {
+    state.localError = r.error;
+    renderBanners();
+  }
+}
+
+function offlineActive(): boolean {
+  return state.offline.phase !== "stopped" && state.offline.phase !== "error";
+}
+
+async function startOffline(username?: string): Promise<void> {
+  state.offlineView = true;
+  state.playMenu = false;
+  setView("play");
+  // The phases arrive as status events; the result only matters when the start was refused
+  // before any phase was set (for example the online game already running).
+  const r = await api.startOffline(username);
+  if (!r.ok && r.error.code !== "cancelled" && state.offline.phase !== "error") onOfflineStatus({ phase: "error", error: r.error });
+}
+
+async function submitOfflineName(): Promise<void> {
+  const name = state.offlineName.trim();
+  if (checkUsername(name) !== "ok") return;
+  await startOffline(name);
+}
+
+function leaveOffline(): void {
+  state.offlineView = false;
+  state.playMenu = false;
+  renderAll();
+}
+
+function onOfflineStatus(s: OfflineStatus): void {
+  state.offline = s;
+  if (s.phase !== "stopped") state.offlineView = true;
+  if (s.phase === "running" || s.phase === "launching-game") {
+    state.offlineName = "";
+    offlineNameInput.value = "";
+  }
+  renderAll();
+}
+
+function playOffline(): HTMLElement[] {
+  const s = state.offline;
+  const top = h("div", { class: "eyebrow" }, t("off_eyebrow"));
+  switch (s.phase) {
+    case "needs-username": {
+      offlineNameInput.value = state.offlineName;
+      const ok = checkUsername(state.offlineName.trim()) === "ok";
+      const parts: HTMLElement[] = [top, ...heading(t("off_name_title"), t("off_name_text"))];
+      parts.push(
+        card(
+          "",
+          h("div", { class: "field" }, h("label", { class: "field-label", for: "offline-name" }, t("off_name_label")), offlineNameInput, offlineNameHint),
+          s.error ? h("p", { class: "hint hint-bad" }, icon("warning"), errorText(s.error)) : null,
+          h("div", { class: "card-row" }, button(t("off_continue"), () => void submitOfflineName(), { cls: "btn-primary", fk: "offline-continue", disabled: !ok }), linkButton(t("off_cancel"), () => void api.stopOffline().then(leaveOffline), { fk: "offline-cancel" })),
+        ),
+      );
+      queueMicrotask(updateOfflineNameFeedback);
+      return parts;
+    }
+    case "running":
+      return [
+        top,
+        ...heading(t("off_running_title"), t("off_running_text")),
+        // The runtime owns the local servers while the game runs and stops them itself when the game
+        // exits, so there is nothing to press here.
+        card("", h("p", { class: "card-text" }, t("off_running_close")), h("p", { class: "small-print" }, t("off_running_note"))),
+      ];
+    case "stopping":
+      return [top, ...heading(t("off_stopping_title"), null), card("", h("div", { class: "card-row" }, h("div", { class: "spinner", role: "presentation" }), t("off_stopping_wait")))];
+    case "stopped":
+      return [
+        top,
+        ...heading(t("off_stopped_title"), t("off_stopped_text")),
+        card("", h("div", { class: "card-row" }, button(t("off_again"), () => void startOffline(), { cls: "btn-primary", fk: "offline-again" }), linkButton(t("off_back"), leaveOffline, { fk: "offline-back" }))),
+      ];
+    case "error":
+      return [
+        top,
+        ...heading(t("off_error_title"), s.error ? errorText(s.error) : null),
+        card("", h("div", { class: "card-row" }, button(t("off_retry"), () => void startOffline(), { cls: "btn-primary", icon: "refresh", fk: "offline-retry" }), linkButton(t("off_back"), leaveOffline, { fk: "offline-back" }))),
+      ];
+    default: {
+      const at = OFFLINE_STEPS.findIndex((x) => x.phase === s.phase);
+      const steps = h(
+        "ol",
+        { class: "offline-steps" },
+        ...OFFLINE_STEPS.map((x, i) =>
+          h("li", { class: `offline-step ${i < at ? "is-done" : i === at ? "is-current" : ""}`.trim(), "aria-current": i === at ? "step" : undefined }, i < at ? icon("check") : i === at ? h("span", { class: "spinner", role: "presentation" }) : h("span", { class: "offline-dot", "aria-hidden": "true" }), tk(x.key)),
+        ),
+      );
+      const bar = h("div", { class: "offline-bar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(Math.round((s.progress ?? 0) * 100)), "aria-label": t("off_starting_title") }, h("span", {}));
+      (bar.firstChild as HTMLElement).style.width = `${Math.round((s.progress ?? 0) * 100)}%`;
+      return [
+        top,
+        ...heading(t("off_starting_title"), t("off_starting_text")),
+        // Cancel only before the game starts: once it is launching, the runtime keeps the stack.
+        card("", steps, s.progress !== undefined ? bar : null, s.phase !== "launching-game" ? h("div", { class: "card-row" }, linkButton(t("off_cancel"), () => void api.stopOffline(), { fk: "offline-cancel" })) : null),
+      ];
+    }
+  }
+}
+
+// The PLAY button's arrow and its one-item menu: "Play offline", or back to online play while the
+// Play page shows offline play. Locked while an online game or a download runs.
+const playMore = h("button", { type: "button", class: "play-more", id: "play-more", "aria-haspopup": "menu", "aria-expanded": "false", "aria-controls": "play-menu" }, icon("chevron_down"));
+const playMenu = h("div", { class: "play-menu", id: "play-menu", role: "menu", hidden: true });
+playMore.addEventListener("click", () => {
+  state.playMenu = !state.playMenu;
+  renderPlayMenu();
+});
+window.addEventListener("mousedown", (e) => {
+  if (state.playMenu && !playMore.contains(e.target as Node) && !playMenu.contains(e.target as Node)) {
+    state.playMenu = false;
+    renderPlayMenu();
+  }
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && state.playMenu) {
+    state.playMenu = false;
+    renderPlayMenu();
+    playMore.focus();
+  }
+});
+
+function renderPlayMenu(): void {
+  const snap = state.snap;
+  const locked = !snap || snap.game.running || snap.task !== null || snap.busy || offlineActive();
+  if (locked) state.playMenu = false;
+  playMore.disabled = locked;
+  playMore.title = t("off_more");
+  playMore.setAttribute("aria-label", t("off_more"));
+  playMore.setAttribute("aria-expanded", state.playMenu ? "true" : "false");
+  playMenu.hidden = !state.playMenu;
+  const item = state.offlineView
+    ? h("button", { type: "button", class: "play-menu-item", role: "menuitem", "data-fk": "play-online" }, icon("globe"), h("span", { class: "play-menu-label" }, t("off_menu_online")))
+    : h("button", { type: "button", class: "play-menu-item", role: "menuitem", "data-fk": "play-offline" }, icon("tunnel"), h("span", { class: "play-menu-label" }, t("off_menu_offline")));
+  item.addEventListener("click", () => (state.offlineView ? leaveOffline() : void startOffline()));
+  playMenu.replaceChildren(item);
+}
+
+function initPlayMenu(): void {
+  const wrap = h("div", { class: "play-split" });
+  primary.replaceWith(wrap);
+  wrap.append(primary, playMore, playMenu);
+}
+
 async function main(): Promise<void> {
   initChrome();
   buildScene();
@@ -2243,7 +2479,10 @@ async function main(): Promise<void> {
     renderActionBar();
   });
   api.onInviteLink(() => void checkInviteLink());
+  api.onOfflineStatus(onOfflineStatus);
+  initPlayMenu();
   onSnapshot(await api.getSnapshot());
+  onOfflineStatus(await api.offlineStatus());
   void api.setStatusPolling(!document.hidden);
   await checkInviteLink();
 }

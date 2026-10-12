@@ -76,6 +76,7 @@ export type ErrorCode =
   | "compat_runtime_missing"
   | "config_failed"
   | "busy"
+  | "offline_save_invalid" // the file picked to restore is not an offline save
   | "cancelled"
   | "cert_mismatch"
   | "cert_changed" // a public invite whose certificate differs from the one this PC's key belongs to
@@ -85,7 +86,6 @@ export type ErrorCode =
   | "unknown"
   | "offline_unavailable"
   | "offline_insufficient_memory"
-  | "offline_save_invalid"
 
 
 // Short messages that are not errors.
@@ -97,21 +97,21 @@ export interface LauncherError {
   detail?: string;
 }
 
-
+// Offline play (Discussion #57): the local runtime's state, as agreed with its author.
 export type OfflinePhase =
-    | "preparing"
-    | "starting-metagame"
-    | "starting-deploy"
-    | "needs-username"
-    | "launching-game"
-    | "running"
-    | "stopping"
-    | "stopped"
-    | "error";
+  | "preparing"
+  | "starting-metagame"
+  | "starting-deploy"
+  | "needs-username" // first offline start only: no local account yet
+  | "launching-game"
+  | "running"
+  | "stopping"
+  | "stopped"
+  | "error";
 
 export interface OfflineStatus {
   phase: OfflinePhase;
-  progress?: number;
+  progress?: number; // 0..1 when meaningful
   error?: LauncherError;
 }
 
@@ -290,10 +290,12 @@ export const IPC = {
   takeInviteLink: "dr:take-invite-link",
   dismissNotice: "dr:dismiss-notice",
   dismissError: "dr:dismiss-error",
+  offlineExportSave: "dr:offline-export-save",
+  offlineImportSave: "dr:offline-import-save",
   // events
   inviteLink: "dr:invite-link",
+  offlineStatusChanged: "dr:offline-status-changed",
   snapshot: "dr:snapshot",
   progress: "dr:progress",
   windowState: "dr:window-state",
-  offlineStatusChanged: "dr:offline-status-changed",
 } as const;

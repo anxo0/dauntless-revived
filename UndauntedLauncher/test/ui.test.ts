@@ -18,9 +18,9 @@ import { EXPOSURE_MODES, LANGUAGES } from "../src/shared/types";
 const ROOT = path.resolve(__dirname, "..", "..");
 
 // Records over the union types: the compiler fails this file if a new code is added without text.
-// The maintainer's save UI supplies this backend-only error's translation later.
-const ERROR_CODES: Record<Exclude<ErrorCode, "offline_save_invalid">, true> = {
+const ERROR_CODES: Record<ErrorCode, true> = {
   account_banned: true,
+  offline_save_invalid: true,
   invite_invalid_format: true,
   invite_invalid: true,
   username_invalid: true,

@@ -1964,6 +1964,165 @@ img {
 
 /* The big button is the primary button, larger: ink on ice to glow (7.31:1 at worst), ink on glow
    when hovered, frost on azure when pressed. */
+/* PLAY with a small arrow built into its right end, past a divider: a menu with "Play offline"
+   (or back to online play). The label moves left to make room for it. */
+.play-split {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.play-split .big-button {
+  padding-right: 74px;
+}
+
+.play-more {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  padding: 0;
+  border: 0;
+  border-left: 2px solid color-mix(in srgb, var(--dr-ink) 30%, transparent);
+  border-radius: 0;
+  background: transparent;
+  color: var(--dr-ink);
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+/* Hover: only the arrow reacts (a nudge down), no box around it. */
+.play-more:hover:not(:disabled) .icon {
+  transform: translateY(2px);
+}
+
+.play-more .icon {
+  transition: transform 0.12s;
+}
+
+/* No focus box over the gold plate: the keyboard focus shows as a light glow on the arrow. */
+.play-more:focus,
+.play-more:focus-visible {
+  outline: none;
+}
+
+.play-more:focus-visible .icon {
+  filter: drop-shadow(0 0 3px var(--dr-frost)) drop-shadow(0 0 2px var(--dr-frost));
+}
+
+.play-more:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.play-more .icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.6;
+}
+
+.play-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  min-width: 240px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--edge);
+  background: var(--glass-strong);
+  box-shadow: 0 12px 30px var(--shadow);
+}
+
+.play-menu-item {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: var(--dr-frost);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.play-menu-item:hover,
+.play-menu-item:focus-visible {
+  background: var(--dr-deep);
+}
+
+.play-menu-item .icon {
+  width: 18px;
+  height: 18px;
+  color: var(--dr-ice);
+}
+
+/* Offline play's progress: the steps, done, current and to come, and a bar. */
+.offline-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.offline-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--dr-steel);
+}
+
+.offline-step .icon,
+.offline-step .spinner {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.offline-step.is-done {
+  color: var(--dr-frost);
+}
+
+.offline-step.is-done .icon {
+  color: var(--dr-ice);
+}
+
+.offline-step.is-current {
+  color: var(--dr-frost);
+  font-weight: 600;
+}
+
+.offline-dot {
+  width: 10px;
+  height: 10px;
+  margin: 4px;
+  border-radius: 50%;
+  border: 1px solid var(--edge);
+  flex: none;
+}
+
+.offline-bar {
+  height: 6px;
+  margin-top: 14px;
+  border-radius: 3px;
+  background: var(--dr-deep);
+  overflow: hidden;
+}
+
+.offline-bar > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--dr-ice);
+  transition: width 0.3s;
+}
+
 .big-button {
   position: relative;
   min-width: 250px;

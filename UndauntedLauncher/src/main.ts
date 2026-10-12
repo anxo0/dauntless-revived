@@ -349,6 +349,26 @@ function handle(channel: string, fn: (event: IpcMainInvokeEvent, ...args: unknow
 }
 
 function registerIpc(c: Controller): void {
+  // Offline play's save backups. The file dialogs stay in the main process: the page never names a path.
+  handle(IPC.offlineExportSave, async () => {
+    if (!mainWindow) return { ok: false, error: { code: "cancelled" } };
+    const stamp = new Date().toISOString().slice(0, 10);
+    const r = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: path.join(app.getPath("documents"), `Dauntless Revived offline save ${stamp}.drsave`),
+      filters: [{ name: "Dauntless Revived offline save", extensions: ["drsave"] }],
+      properties: ["dontAddToRecent", "showOverwriteConfirmation"],
+    });
+    return r.canceled || !r.filePath ? { ok: false, error: { code: "cancelled" } } : c.exportOfflineSave(r.filePath);
+  });
+  handle(IPC.offlineImportSave, async () => {
+    if (!mainWindow) return { ok: false, error: { code: "cancelled" } };
+    const r = await dialog.showOpenDialog(mainWindow, {
+      defaultPath: app.getPath("documents"),
+      filters: [{ name: "Dauntless Revived offline save", extensions: ["drsave"] }],
+      properties: ["openFile", "dontAddToRecent"],
+    });
+    return r.canceled || r.filePaths.length !== 1 ? { ok: false, error: { code: "cancelled" } } : c.importOfflineSave(r.filePaths[0]);
+  });
   handle(IPC.getSnapshot, () => c.snapshot());
   handle(IPC.checkInvite, (_e, text) => {
     const s = boundedString(text, 2048);

@@ -69,6 +69,8 @@ const api = {
   toggleMaximize: (): Promise<boolean> => ipcRenderer.invoke(IPC.windowMaximize),
   close: (): Promise<void> => ipcRenderer.invoke(IPC.windowClose),
   takeInviteLink: (): Promise<string | null> => ipcRenderer.invoke(IPC.takeInviteLink),
+  exportOfflineSave: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.offlineExportSave),
+  importOfflineSave: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.offlineImportSave),
   onSnapshot: (fn: (s: Snapshot) => void): void => {
     ipcRenderer.on(IPC.snapshot, (_e, s: Snapshot) => fn(s));
   },
