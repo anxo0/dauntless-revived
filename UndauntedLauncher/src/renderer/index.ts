@@ -1522,7 +1522,7 @@ function renderSettings(): void {
       : null;
 
     const streamerSwitch = h("button", { type: "button", class: "switch", role: "switch", "aria-checked": streamer() ? "true" : "false", "aria-labelledby": "streamer-label", "data-fk": "streamer" });
-    streamerSwitch.addEventListener("click", () => void api.setSettings({ streamerMode: !streamer() }));
+    onToggle(streamerSwitch, (on) => void api.setSettings({ streamerMode: on }));
     const streaming = card(
       "settings-section",
       h("h2", { class: "card-title" }, t("set_streaming")),
