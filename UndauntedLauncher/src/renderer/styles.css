@@ -2111,6 +2111,20 @@ img {
   background: var(--dr-ice);
 }
 
+.steps.compact .step:not(.current) .step-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.steps.compact .step-line {
+  width: 22px;
+  margin: 0 6px;
+}
+
 .action-hint {
   margin-top: 8px;
   font-size: 12.5px;

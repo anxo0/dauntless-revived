@@ -866,8 +866,18 @@ function renderActionBar(): void {
     announce(v.indeterminate ? t(v.titleKey) : `${t(v.titleKey)}: ${Math.floor(v.percent / 10) * 10} %`);
   } else {
     renderRegion(info, JSON.stringify([state.lang, snap.phase, snap.connect.checking, snap.connect.problem, snap.install.totalBytes]), () => [renderSteps(snap), h("div", { class: "action-hint" }, actionHint(snap))]);
+    fitSteps();
     announce(actionHint(snap));
   }
+}
+
+// Longer languages (German, French, Russian...) can make the step labels wider than the space beside
+// the big button: then only the current step keeps its label, as on a narrow window.
+function fitSteps(): void {
+  const steps = document.querySelector<HTMLElement>("#action-info .steps");
+  if (!steps) return;
+  steps.classList.remove("compact");
+  if (steps.scrollWidth > steps.clientWidth) steps.classList.add("compact");
 }
 
 // The action bar's screen reader announcements: what to do next, and download milestones (every
@@ -2200,6 +2210,7 @@ function onSnapshot(snap: Snapshot): void {
 }
 
 function initChrome(): void {
+  window.addEventListener("resize", fitSteps);
   const min = $("#win-min");
   const max = $("#win-max");
   const close = $("#win-close");
