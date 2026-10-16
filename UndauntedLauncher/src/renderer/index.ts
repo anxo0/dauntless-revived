@@ -27,7 +27,7 @@ type Modal =
 
 const api = window.launcher;
 const ART_URL = /^dr-art:\/\/bg\/[0-9a-f]{64}$/;
-const TIME_LOCALES: Record<Language, string> = { en: "en-GB", fi: "fi-FI", es: "es-ES" };
+const TIME_LOCALES: Record<Language, string> = { en: "en-GB", fi: "fi-FI", de: "de-DE", es: "es-ES", fr: "fr-FR", it: "it-IT", ja: "ja-JP", pt: "pt-BR", ru: "ru-RU" };
 const GAME_LANGUAGE_NAMES: Record<Exclude<GameLanguage, "auto">, string> = { "en-US": "English", "de-DE": "Deutsch", "es-ES": "Español", "fr-FR": "Français", "it-IT": "Italiano", "ja-JP": "日本語", "pt-BR": "Português (Brasil)", "ru-RU": "Русский" };
 
 const state = {
@@ -1459,12 +1459,14 @@ function renderSettings(): void {
       infoRow(h("span", { class: "settings-row-title", id: "windowed-label" }, t("set_windowed")), t("set_windowed_help"), windowed),
     );
 
-    const langRow = h("div", { class: "lang-switch", role: "group", "aria-label": t("set_language"), style: undefined });
-    for (const l of LANGUAGES) {
-      const b = h("button", { type: "button", class: "lang-btn", lang: l, "aria-pressed": snap.settings.language === l ? "true" : "false", "data-fk": `set-lang-${l}` }, t(`lang_${l}`));
-      b.addEventListener("click", () => void api.setSettings({ language: l }));
-      langRow.appendChild(b);
-    }
+    // The launcher's language, every one by its own name (the rail keeps quick buttons for three).
+    const launcherLanguage = dropdown<Language>({
+      id: "launcher-language-select",
+      fk: "launcher-language",
+      value: snap.settings.language,
+      options: LANGUAGES.map((l) => ({ value: l, label: t(`lang_${l}`), lang: l })),
+      onChange: (language) => void api.setSettings({ language }),
+    });
     // The game's own text language: every language the 1.4.4 client has text for, by its own name.
     const gameLanguage = dropdown<GameLanguage>({
       id: "game-language-select",
@@ -1477,7 +1479,7 @@ function renderSettings(): void {
     const language = card(
       "settings-section",
       h("h2", { class: "card-title" }, t("set_language")),
-      langRow,
+      infoRow(h("label", { class: "settings-row-title", for: "launcher-language-select" }, t("set_launcher_language")), t("set_launcher_language_text"), launcherLanguage),
       infoRow(h("label", { class: "settings-row-title", for: "game-language-select" }, t("set_game_language")), t("set_game_language_text"), gameLanguage),
     );
 

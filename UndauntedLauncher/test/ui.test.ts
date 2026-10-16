@@ -97,7 +97,10 @@ test("the language picker offers every language, and the system locale picks one
   assert.equal(systemLanguage("es-419"), "es");
   assert.equal(systemLanguage("fi"), "fi");
   assert.equal(systemLanguage("en-US"), "en");
-  assert.equal(systemLanguage("de-DE"), "en");
+  assert.equal(systemLanguage("de-DE"), "de");
+  assert.equal(systemLanguage("pt-BR"), "pt");
+  assert.equal(systemLanguage("ja"), "ja");
+  assert.equal(systemLanguage("sv-SE"), "en");
 });
 
 test("every dynamic key family is complete", () => {

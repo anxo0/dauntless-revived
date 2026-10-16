@@ -6,8 +6,9 @@ import type { ServerMode } from "./invite";
 
 export type { ServerMode };
 
-export type Language = "en" | "fi" | "es";
-export const LANGUAGES: readonly Language[] = ["en", "fi", "es"];
+// The launcher's own languages: English and Finnish, plus every language the 1.4.4 client has text for.
+export type Language = "en" | "fi" | "de" | "es" | "fr" | "it" | "ja" | "pt" | "ru";
+export const LANGUAGES: readonly Language[] = ["en", "fi", "de", "es", "fr", "it", "ja", "pt", "ru"];
 
 // -1 = leave graphics to the in-game menu, 0..4 = Low, Medium, High, Epic, Cinematic.
 export type GraphicsPreset = -1 | 0 | 1 | 2 | 3 | 4;
