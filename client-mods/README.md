@@ -12,6 +12,10 @@ Optional client-side mods, installed automatically next to the game exe (`Archon
 - **Uncrafted Weapons** (`CraftStar`): in the weapon crafting list, weapons you have never crafted get
   `>> ` in front of their name, in red, gold or purple (picked in the Mod Menu).
 
+- **PS5Icons**: PlayStation 5 button prompts and a DualSense picture for the Controls screen. They
+  are not a UE4SS mod: the client DLL (`UndauntedInternalServer.dll`) shows them while a DualSense
+  is connected. Based on "PS5 Button Icons and Controls" by Zacksly (CC BY 3.0, modified; see
+  `PS5Icons/LICENSE.txt`).
 
 They only change what you see on your own screen. The game works without them.
 
